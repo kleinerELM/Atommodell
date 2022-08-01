@@ -1,9 +1,7 @@
 # Atommodell
 Upcyclingprojekt eines alten Atommodells aus den 1950er Jahren.
 
-<img src="assets/front.mp4" width="300" alt="Vorderseite"/>
-
-<img src="assets/back.jpg" width="300" alt="Rückseite"/>
+<img src="assets/front.jpg" width="300" alt="Vorderseite"/><img src="assets/back.jpg" width="300" alt="Rückseite"/>
 
 Das Original war über ein einfaches Schaltfeld steuerbar. In der aktuellen Version ist das Schaltfeld nicht funktional.
 
@@ -19,4 +17,4 @@ Das Original war über ein einfaches Schaltfeld steuerbar. In der aktuellen Vers
  - 1x 12 V / 5 V Netzteil
  - 37x 6 V E10 Glühbirnen (betrieben auf 2,9 V)
 
-assets/old.mp4
+https://github.com/kleinerELM/Atommodell/blob/main/assets/old.mp4?raw=true
