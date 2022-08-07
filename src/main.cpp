@@ -3,7 +3,83 @@
 
 #include <Arduino.h>
 
-#include <Dictionary.h>
+#if defined(ARDUINO_ARCH_ESP8266)
+  #include <ESP8266WiFi.h>
+  #include <ESP8266WebServer.h>
+  #include <ESP8266mDNS.h>
+  #include <ESP8266HTTPUpdateServer.h>
+  #define HOSTIDENTIFY  "esp8266"
+  #define mDNSUpdate(c)  do { c.update(); } while(0)
+  using WebServerClass = ESP8266WebServer;
+  using HTTPUpdateServerClass = ESP8266HTTPUpdateServer;
+#elif defined(ARDUINO_ARCH_ESP32)
+  #include <WiFi.h>
+  #include <WebServer.h>
+  #include <ESPmDNS.h>
+  #include "HTTPUpdateServer.h"
+  #define HOSTIDENTIFY  "atommodell"
+  #define mDNSUpdate(c)  do {} while(0)
+  using WebServerClass = WebServer;
+  using HTTPUpdateServerClass = HTTPUpdateServer;
+#endif
+#include <WiFiClient.h>
+#include <AutoConnect.h>
+
+// Fix hostname for mDNS. It is a requirement for the lightweight update feature.
+static const char* host = HOSTIDENTIFY "-webupdate";
+#define HTTP_PORT 80
+
+// ESP8266WebServer instance will be shared both AutoConnect and UpdateServer.
+WebServerClass  httpServer(HTTP_PORT);
+
+#define USERNAME "Florian"           //*< Replace the actual username you want */
+#define PASSWORD "legitupdatepass"   //*< Replace the actual password you want */
+
+// Declare AutoConnectAux to bind the HTTPWebUpdateServer via /update url
+// and call it from the menu.
+// The custom web page is an empty page that does not contain AutoConnectElements.
+// Its content will be emitted by ESP8266HTTPUpdateServer.
+HTTPUpdateServerClass httpUpdater;
+AutoConnectAux  update("/update", "Update");
+
+// Declare AutoConnect and the custom web pages for an application sketch.
+AutoConnect     portal(httpServer);
+AutoConnectAux  hello;
+
+static const char AUX_AppPage[] PROGMEM = R"(
+{
+  "title": "Atommodell",
+  "uri": "/",
+  "menu": true,
+  "element": [
+    {
+      "name": "caption",
+      "type": "ACText",
+      "value": "<h2>Atommodell</h2>",
+      "style": "text-align:center;color:#2f4f4f;padding:10px;"
+    },
+    {
+      "name": "content",
+      "type": "ACText",
+      "value": "Atommodell NodeMCU32s."
+    }
+  ]
+}
+)";
+
+
+//#define AA_FONT_SMALL "NotoSansBold15"
+#define AA_FONT_LARGE "NotoSansBold36"
+
+// Font files are stored in SPIFFS, so load the library
+#include <FS.h>
+
+// pins & display type are defined in platformio.ini
+#include <TFT_eSPI.h>
+#include <SPI.h>
+
+TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
+
 #include "PCF8574.h"
 /*PCF8574 PCF_1(0x25);
 PCF8574 PCF_2(0x22);
@@ -11,12 +87,18 @@ PCF8574 PCF_3(0x20);
 PCF8574 PCF_4(0x23);*/
 PCF8574 PCF[] = {PCF8574(0x25), PCF8574(0x22), PCF8574(0x20), PCF8574(0x21)};
 
+// pins for 5V relais
+#define R1 12
+#define R2 14
+#define R3 27
+#define R4 26
+int direct_to_relais[4] = { R1, R2, R3, R4 };
 
                     //          1           2
-int element[36][2] = { {  4, 26 }, {  4, 27 }, // 1, 2
+int element[36][2] = { {  4, R3 }, {  4, R4 }, // 1, 2
 
                     //          3           4           5           6           7           8           9          10
-                       {  4, 12 }, {  0,  5 }, {  1,  6 }, {  1,  0 }, {  4, 14 }, {  0,  7 }, {  1,  7 }, {  0,  6 },
+                       {  4, R1 }, {  0,  5 }, {  1,  6 }, {  1,  0 }, {  4, R2 }, {  0,  7 }, {  1,  7 }, {  0,  6 },
 
                     //         11          12          13          14          15          16          17          18          19
                        {  2,  5 }, {  3,  4 }, {  2,  4 }, {  3,  3 }, {  2,  3 }, {  3,  2 }, {  0,  0 }, {  1,  1 }, {  0,  1 },
@@ -36,6 +118,11 @@ String elements_long[36] = { "Wasserstoff", "Helium", "Lithium", "Beryllium", "B
                              "Neon", "Natrium", "Magnesium", "Aluminium", "Silizium", "Phosphor", "Schwefel", "Chlor", "Argon",
                              "Kalium", "Calcium", "Scantium", "Titan", "Vanadium", "Chrom", "Mangan", "Eisen", "Cobalt",
                              "Nickel", "Kupfer", "Zink", "Gallium", "Germanium", "Arsen", "Selen", "Brom", "Krypton" };
+
+float elements_mass[36] = { 1.0080, 4.0026, 6.94, 9.0122, 10.81, 12.011, 14.007, 15.999, 18.998,
+                            20.180, 22.990, 24.305, 26.982, 28.085, 30.974, 32.06, 35.45, 39.948,
+                            39.098, 40.078, 44.954, 47.867, 50.942, 51.996, 54.938, 55.845, 58.933,
+                            58.693, 63.546, 65.380, 69.723, 72.630, 74.922, 78.971, 79.904, 83.798 };
 
 #define shell_K  2
 #define shell_L  8
@@ -68,7 +155,35 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
   for (int k = 0; k < 36; k++) {
     enable_lamp( element[k][0], element[k][1], 1, 0 );
   }
-  delay(100);
+
+  tft.fillScreen(TFT_BLACK);
+
+  tft.drawRect(1,1,tft.width()-1,tft.height()-1,TFT_WHITE);
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setCursor(5,5,1);
+  tft.println(String(atomic_number));
+
+  tft.setTextDatum(TR_DATUM); // Top Centre datum
+  String mass = String(elements_mass[atomic_number-1],4U);
+  tft.setCursor(tft.width()-5-tft.textWidth(mass,1),5,1);
+  tft.println(mass);
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK); // Set the font colour and the background colour
+
+  tft.setCursor((tft.width()-tft.textWidth(elements_long[atomic_number-1], 1))/2,75,1);
+  tft.println(elements_long[atomic_number-1]);
+
+
+  tft.setTextDatum(TC_DATUM); // Top Centre datum
+  int xpos = tft.width() / 2; // Half the screen width
+  tft.loadFont(AA_FONT_LARGE); // Load another different font
+
+  tft.setTextColor(TFT_GREEN, TFT_BLACK); // Change the font colour and the background colour
+  tft.drawString(elements_short[atomic_number-1] , xpos-3, 40);
+  tft.unloadFont(); // Remove the font to recover memory used
+
+  delay(50);
 
   int start = 0;
   if ( animation == 1 ) {
@@ -105,69 +220,6 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
   Serial.println("----------------");
 }
 
-#if defined(ARDUINO_ARCH_ESP8266)
-  #include <ESP8266WiFi.h>
-  #include <ESP8266WebServer.h>
-  #include <ESP8266mDNS.h>
-  #include <ESP8266HTTPUpdateServer.h>
-  #define HOSTIDENTIFY  "esp8266"
-  #define mDNSUpdate(c)  do { c.update(); } while(0)
-  using WebServerClass = ESP8266WebServer;
-  using HTTPUpdateServerClass = ESP8266HTTPUpdateServer;
-#elif defined(ARDUINO_ARCH_ESP32)
-  #include <WiFi.h>
-  #include <WebServer.h>
-  #include <ESPmDNS.h>
-  #include "HTTPUpdateServer.h"
-  #define HOSTIDENTIFY  "esp32_h"
-  #define mDNSUpdate(c)  do {} while(0)
-  using WebServerClass = WebServer;
-  using HTTPUpdateServerClass = HTTPUpdateServer;
-#endif
-#include <WiFiClient.h>
-#include <AutoConnect.h>
-
-// Fix hostname for mDNS. It is a requirement for the lightweight update feature.
-static const char* host = HOSTIDENTIFY "-webupdate";
-#define HTTP_PORT 80
-
-// ESP8266WebServer instance will be shared both AutoConnect and UpdateServer.
-WebServerClass  httpServer(HTTP_PORT);
-
-#define USERNAME "Florian"           //*< Replace the actual username you want */
-#define PASSWORD "legitupdatepass"   //*< Replace the actual password you want */
-// Declare AutoConnectAux to bind the HTTPWebUpdateServer via /update url
-// and call it from the menu.
-// The custom web page is an empty page that does not contain AutoConnectElements.
-// Its content will be emitted by ESP8266HTTPUpdateServer.
-HTTPUpdateServerClass httpUpdater;
-AutoConnectAux  update("/update", "Update");
-
-// Declare AutoConnect and the custom web pages for an application sketch.
-AutoConnect     portal(httpServer);
-AutoConnectAux  hello;
-
-static const char AUX_AppPage[] PROGMEM = R"(
-{
-  "title": "Atommodell",
-  "uri": "/",
-  "menu": true,
-  "element": [
-    {
-      "name": "caption",
-      "type": "ACText",
-      "value": "<h2>Atommodell</h2>",
-      "style": "text-align:center;color:#2f4f4f;padding:10px;"
-    },
-    {
-      "name": "content",
-      "type": "ACText",
-      "value": "DHT22 auf NodeMCU32s."
-    }
-  ]
-}
-)";
-
 void setup() {
   delay(1000);
   // debug-serial-connection
@@ -189,7 +241,7 @@ void setup() {
   // Load a custom web page for a sketch and a dummy page for the updater.
   hello.load(AUX_AppPage);
   portal.join({ hello, update });
-  //if (portal.begin()) { // code stops if not able to connect to wifi... this sucks!
+  if (portal.begin()) { // code stops if not able to connect to wifi... this sucks!
     Serial.println("1");
     if (MDNS.begin(host)) {
         MDNS.addService("http", "tcp", HTTP_PORT);
@@ -199,7 +251,7 @@ void setup() {
     }
     else
       Serial.println("Error setting up MDNS responder");
-  //}
+  }
 
   Serial.println("-PCF8574-");
   Serial.print("PCF8574_LIB_VERSION:\t");
@@ -219,22 +271,40 @@ void setup() {
   }
   Serial.print( "finished loading PCF8574: " );
   Serial.println(j);
-  int direct_to_relais[4] = { 12, 14, 26, 27 };
 
   for (int i = 0 ; i < 4 ; i++) {
     pinMode(direct_to_relais[i], OUTPUT);
     digitalWrite(direct_to_relais[i], LOW);
   }
 
+  tft.init();
+  tft.setRotation(0);
+  tft.fillScreen(TFT_BLACK);
+
+  if (!SPIFFS.begin()) {
+    Serial.println("SPIFFS initialisation failed!");
+  }
+  Serial.println("\r\nSPIFFS available!");
+
+  // ESP32 will crash if any of the fonts are missing
+  bool font_missing = false;
+  if (SPIFFS.exists("/NotoSansBold15.vlw")    == false) font_missing = true;
+  if (SPIFFS.exists("/NotoSansBold36.vlw")    == false) font_missing = true;
+
+  if (font_missing)
+  {
+    Serial.println("\r\nFont missing in SPIFFS, did you upload it?");
+  }
+  else Serial.println("\r\nFonts found OK.");
+
+
   Serial.println();
   Serial.println("-- Setup done --");
   Serial.println();
 
-  delay(2000);
+  delay(1000);
 }
 
-
-char dht_string[21];
 void loop() {
   /*
   for (int k = 0; k < 2; k++ ) {
@@ -254,6 +324,12 @@ void loop() {
   }
   delay(1000);
   */
+  // standard function, iterate through elements
+
+
+
+
+
 
   int input = 0;
   int an = 0;
