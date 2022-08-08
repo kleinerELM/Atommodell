@@ -129,10 +129,16 @@ float elements_kl[36][4] = { {0,0,0,0}, {0,0,0,0}, {0,0,0,0}, {0.109,0,0,0}, {0.
                              {3.312,3.589,0,0}, {3.690,4.012,0.341,0.345}, {4.088,4.460,0.395,0.400}, {4.508,4.931,0.452,0.458}, {4.949,5.426,0.511,0.519}, {5.411,5.946,0.573,0.583}, {5.894,6.489,0.637,0.649}, {6.398,7.057,0.705,0.718}, {6.924,7.648,0.776,0.791},
                              {7.471,8.263,0.851,0.869}, {8.040,8.904,0.930,0.950}, {8.630,9.570,1.012,1.043}, {9.241,10.263,1.098,1.125}, {9.874,10.980,1.188,1.218}, {10.530,11.724,1.282,1.317}, {11.207,12.949,1.379,1.419}, {11.907,13.289,1.480,1.526}, {12.631,14.110,1.586,1.636} };
 
-float elements_enw[36] = { 2.2, 0, 0.98, 1.57, 2.04, 2.55, 3.07, 3.58, 3.98, 0,
-                           0.9, 1.31, 1.61, 1.90, 2.19, 2.58, 3.16, 0,
+float elements_enw[36] = { 2.2, 0, 0.98, 1.57, 2.04, 2.55, 3.07, 3.58, 3.98,
+                           0, 0.9, 1.31, 1.61, 1.90, 2.19, 2.58, 3.16, 0,
                            0.82, 1.00, 1.36, 1.54, 1.63, 1.66, 1.55, 1.8, 1.88,
                            1.71, 1.90, 1.65, 1.81, 2.01, 2.18, 2.55, 2.96, 0 };
+
+// {d, s, p} - order changed for simpler display algo.
+int8_t elements_ec[36][3] = { {0,1,0},{0,2,0},{0,1,0},{0,2,0},{0,2,1},{0,2,2},{0,2,3},{0,2,4},{0,2,5},
+                             {0,2,6}, {0,1,0},{0,2,0},{0,2,1},{0,2,2},{0,2,3},{0,2,4},{0,2,5},
+                             {0,2,6}, {0,1,0},{0,2,0},{1,2,0},{2,2,0},{3,2,0},{5,1,0},{5,2,0},{6,2,0},{7,2,0},
+                             {8,2,0},{10,1,0},{10,2,0},{10,2,1},{10,2,2},{10,2,3},{10,2,4},{10,2,5},{10,2,6} };
 
 #define shell_K  2
 #define shell_L  8
@@ -191,7 +197,7 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
   tft.println(elements_long[arr_pos]);
 
   // k alpha, bottom left
-  ypos = 80;
+  ypos = 90;
   String klline_names[4] = {"Ka", "Kb", "La", "Lb"};
   for (int i = 0; i < 4; i++) {
     if (i>1) {
@@ -211,13 +217,13 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
 
   // element name, center
   ypos = 75;
-  tft.setCursor((tft.width()-tft.textWidth(elements_long[arr_pos], 1))/2,ypos,fontsize);
+  tft.setCursor((tft.width()-tft.textWidth(elements_long[arr_pos], fontsize))/2,ypos,fontsize);
   tft.println(elements_long[arr_pos]);
 
   // element enw, right
   if (elements_enw[arr_pos] > 0) {
     String enw = String(elements_enw[arr_pos], 2U);
-    ypos = 88;
+    ypos = 98;
     tft.setCursor(tft.width()-tft.textWidth(enw)-padding,ypos,fontsize);
     tft.println( enw );
   }
@@ -230,6 +236,55 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
   tft.setTextColor(TFT_GREEN, TFT_BLACK); // Change the font colour and the background colour
   tft.drawString(elements_short[arr_pos] , xpos-3, 40);
   tft.unloadFont(); // Remove the font to recover memory used
+
+  // electron configuration
+  String e_config = "";
+  String e_config_s = "";
+  String pos = "";
+  int glyph_width = tft.textWidth("a"); // font is monospace, therefore constant
+  // {d, s, p} - order changed for simpler display algo.
+  int ec_pos[3] = {3,1,2};
+  if ( atomic_number > shell_K ) {
+    ec_pos[1] += 1;
+    e_config = "[He]";
+    e_config_s = "    ";
+    if ( atomic_number > shell_L + shell_K) {
+      ec_pos[1] += 1; // s
+      ec_pos[2] += 1; // p
+      e_config = "[Ne]";
+      if ( atomic_number > shell_M + shell_L + shell_K ) {
+        ec_pos[1] += 1; // s
+        ec_pos[2] += 1; // p
+        e_config = "[Ar]";
+      }
+    }
+  }
+  // d
+  if (elements_ec[arr_pos][0] > 0 ) {
+    e_config += String(ec_pos[0])+"d";
+    e_config += (elements_ec[arr_pos][0] > 9) ? "  ": " " ;
+    e_config_s += "  " + String(elements_ec[arr_pos][0]);
+  }
+  // s
+  if (elements_ec[arr_pos][1] > 0 ) {
+    e_config += String(ec_pos[1])+"s";
+    e_config += (elements_ec[arr_pos][1] > 9) ? "  ": " " ;
+    e_config_s += "  " + String(elements_ec[arr_pos][1]);
+  }
+  // p
+  if (elements_ec[arr_pos][2] > 0 ) {
+    e_config += String(ec_pos[2])+"p";
+    e_config += (elements_ec[arr_pos][2] > 9) ? "  ": " " ;
+    e_config_s += "  " + String(elements_ec[arr_pos][2]);
+  }
+  ypos = 88;
+  xpos = (int)((tft.width()-tft.textWidth(e_config, fontsize))/2);
+  tft.setCursor(xpos,ypos,fontsize);
+  tft.println( e_config );
+  tft.setCursor(xpos, ypos-2,fontsize);
+  tft.println( e_config_s );
+
+
 
   delay(50);
 
