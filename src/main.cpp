@@ -124,6 +124,16 @@ float elements_mass[36] = { 1.0080, 4.0026, 6.94, 9.0122, 10.81, 12.011, 14.007,
                             39.098, 40.078, 44.954, 47.867, 50.942, 51.996, 54.938, 55.845, 58.933,
                             58.693, 63.546, 65.380, 69.723, 72.630, 74.922, 78.971, 79.904, 83.798 };
 
+float elements_kl[36][4] = { {0,0,0,0}, {0,0,0,0}, {0,0,0,0}, {0.109,0,0,0}, {0.183,0,0,0}, {0.277,0,0,0}, {0.392,0,0,0}, {0.525,0,0,0}, {0.677,0,0,0},
+                             {0.848,0,0,0}, {1.041,1.067,0,0}, {1.253,1.302,0,0}, {1.486,1.557,0,0}, {1.739,1.836,0,0}, {2.013,2.139,0,0}, {2.307,2.464,0,0}, {2.621,2.815,0,0}, {2.957,3.190,0,0},
+                             {3.312,3.589,0,0}, {3.690,4.012,0.341,0.345}, {4.088,4.460,0.395,0.400}, {4.508,4.931,0.452,0.458}, {4.949,5.426,0.511,0.519}, {5.411,5.946,0.573,0.583}, {5.894,6.489,0.637,0.649}, {6.398,7.057,0.705,0.718}, {6.924,7.648,0.776,0.791},
+                             {7.471,8.263,0.851,0.869}, {8.040,8.904,0.930,0.950}, {8.630,9.570,1.012,1.043}, {9.241,10.263,1.098,1.125}, {9.874,10.980,1.188,1.218}, {10.530,11.724,1.282,1.317}, {11.207,12.949,1.379,1.419}, {11.907,13.289,1.480,1.526}, {12.631,14.110,1.586,1.636} };
+
+float elements_enw[36] = { 2.2, 0, 0.98, 1.57, 2.04, 2.55, 3.07, 3.58, 3.98, 0,
+                           0.9, 1.31, 1.61, 1.90, 2.19, 2.58, 3.16, 0,
+                           0.82, 1.00, 1.36, 1.54, 1.63, 1.66, 1.55, 1.8, 1.88,
+                           1.71, 1.90, 1.65, 1.81, 2.01, 2.18, 2.55, 2.96, 0 };
+
 #define shell_K  2
 #define shell_L  8
 #define shell_M 18
@@ -148,9 +158,10 @@ void enable_lamp( int pcf_id, int pos, int state, int wait ) {
 }
 
 void show_element( int atomic_number, int animation = 0, int electron_delay = 100 ) {
+  int arr_pos = atomic_number-1;
   Serial.println();
   Serial.println("----------------");
-  Serial.println("Zeige " + elements_long[atomic_number-1] + " / " + elements_short[atomic_number-1] + " (#" + String( atomic_number ) + ")");
+  Serial.println("Zeige " + elements_long[arr_pos] + " / " + elements_short[arr_pos] + " (#" + String( atomic_number ) + ")");
 
   for (int k = 0; k < 36; k++) {
     enable_lamp( element[k][0], element[k][1], 1, 0 );
@@ -160,27 +171,64 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
 
   tft.drawRect(1,1,tft.width()-1,tft.height()-1,TFT_WHITE);
 
+  int fontsize = 1;
+  int padding = 5;
+  int xpos = padding;
+  int ypos = padding;
+  // atomic number, top left
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.setCursor(5,5,1);
+  tft.setCursor(padding,padding,fontsize);
   tft.println(String(atomic_number));
 
-  tft.setTextDatum(TR_DATUM); // Top Centre datum
-  String mass = String(elements_mass[atomic_number-1],4U);
-  tft.setCursor(tft.width()-5-tft.textWidth(mass,1),5,1);
+  // element mass, top right
+  String mass = String(elements_mass[arr_pos],4U);
+  tft.setCursor(tft.width()-tft.textWidth(mass,1)-padding,padding,1);
   tft.println(mass);
 
-  tft.setTextColor(TFT_WHITE, TFT_BLACK); // Set the font colour and the background colour
+  // element name, center
+  ypos = 75;
+  tft.setCursor((tft.width()-tft.textWidth(elements_long[arr_pos], 1))/2,ypos,fontsize);
+  tft.println(elements_long[arr_pos]);
 
-  tft.setCursor((tft.width()-tft.textWidth(elements_long[atomic_number-1], 1))/2,75,1);
-  tft.println(elements_long[atomic_number-1]);
+  // k alpha, bottom left
+  ypos = 80;
+  String klline_names[4] = {"Ka", "Kb", "La", "Lb"};
+  for (int i = 0; i < 4; i++) {
+    if (i>1) {
+      // L-lines are less relevant for Elements below atomic number of 52
+      tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    }
+    ypos += 8;
+    tft.setCursor(padding,ypos,fontsize);
+    String kllines = klline_names[i] + ": ";
+    if ( elements_kl[arr_pos][i] > 0 ) {
+      kllines += String(elements_kl[arr_pos][i],3U);
+      tft.println(kllines);
+    } else {
+      break;
+    }
+  }
 
+  // element name, center
+  ypos = 75;
+  tft.setCursor((tft.width()-tft.textWidth(elements_long[arr_pos], 1))/2,ypos,fontsize);
+  tft.println(elements_long[arr_pos]);
 
+  // element enw, right
+  if (elements_enw[arr_pos] > 0) {
+    String enw = String(elements_enw[arr_pos], 2U);
+    ypos = 88;
+    tft.setCursor(tft.width()-tft.textWidth(enw)-padding,ypos,fontsize);
+    tft.println( enw );
+  }
+
+  // colored element symbol
   tft.setTextDatum(TC_DATUM); // Top Centre datum
-  int xpos = tft.width() / 2; // Half the screen width
+  xpos = tft.width() / 2; // Half the screen width
   tft.loadFont(AA_FONT_LARGE); // Load another different font
 
   tft.setTextColor(TFT_GREEN, TFT_BLACK); // Change the font colour and the background colour
-  tft.drawString(elements_short[atomic_number-1] , xpos-3, 40);
+  tft.drawString(elements_short[arr_pos] , xpos-3, 40);
   tft.unloadFont(); // Remove the font to recover memory used
 
   delay(50);
