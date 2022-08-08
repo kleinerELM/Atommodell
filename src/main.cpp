@@ -135,6 +135,7 @@ float elements_enw[36] = { 2.2, 0, 0.98, 1.57, 2.04, 2.55, 3.07, 3.58, 3.98,
                            1.71, 1.90, 1.65, 1.81, 2.01, 2.18, 2.55, 2.96, 0 };
 
 // {d, s, p} - order changed for simpler display algo.
+String ecn[3] = {"d", "s", "p"};
 int8_t elements_ec[36][3] = { {0,1,0},{0,2,0},{0,1,0},{0,2,0},{0,2,1},{0,2,2},{0,2,3},{0,2,4},{0,2,5},
                              {0,2,6}, {0,1,0},{0,2,0},{0,2,1},{0,2,2},{0,2,3},{0,2,4},{0,2,5},
                              {0,2,6}, {0,1,0},{0,2,0},{1,2,0},{2,2,0},{3,2,0},{5,1,0},{5,2,0},{6,2,0},{7,2,0},
@@ -165,6 +166,12 @@ void enable_lamp( int pcf_id, int pos, int state, int wait ) {
 
 void show_element( int atomic_number, int animation = 0, int electron_delay = 100 ) {
   int arr_pos = atomic_number-1;
+  int shell_delay = 500;
+  int fontsize = 1;
+  int padding = 5;
+  int xpos = padding;
+  int ypos = padding;
+
   Serial.println();
   Serial.println("----------------");
   Serial.println("Zeige " + elements_long[arr_pos] + " / " + elements_short[arr_pos] + " (#" + String( atomic_number ) + ")");
@@ -177,10 +184,7 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
 
   tft.drawRect(1,1,tft.width()-1,tft.height()-1,TFT_WHITE);
 
-  int fontsize = 1;
-  int padding = 5;
-  int xpos = padding;
-  int ypos = padding;
+  u_int8_t char_width = tft.textWidth(" ", fontsize);
   // atomic number, top left
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.setCursor(padding,padding,fontsize);
@@ -193,11 +197,63 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
 
   // element name, center
   ypos = 75;
-  tft.setCursor((tft.width()-tft.textWidth(elements_long[arr_pos], 1))/2,ypos,fontsize);
+  tft.setCursor((tft.width()-tft.textWidth(elements_long[arr_pos], fontsize))/2,ypos,fontsize);
   tft.println(elements_long[arr_pos]);
 
-  // k alpha, bottom left
+  // electron configuration
+  String e_config = "";
+  String pos = "";
+  int glyph_width = tft.textWidth("a"); // font is monospace, therefore constant
+  // {d, s, p} - order changed for simpler display algo.
+  int ec_pos[3] = {3,1,2};
+  if ( atomic_number > 2 ) {
+    ec_pos[1] += 1;
+    e_config = "[He] ";
+    if ( atomic_number > 10) {
+      ec_pos[1] += 1; // s
+      ec_pos[2] += 1; // p
+      e_config = "[Ne] ";
+      if ( atomic_number > 18 ) {
+        ec_pos[1] += 1; // s
+        ec_pos[2] += 1; // p
+        e_config = "[Ar] ";
+      }
+    }
+  }
+  u_int8_t ec_coord[3] = {0,0,0};
+  for (int p = 0; p < 3; p++) {
+    if (elements_ec[arr_pos][p] > 0 ) {
+      e_config += String(ec_pos[p])+ecn[p];
+      ec_coord[p] = e_config.length()*char_width;
+      e_config += (elements_ec[arr_pos][p] > 9) ? "  ": " " ;
+    }
+  }
+
   ypos = 90;
+  xpos = (int)((tft.width()-tft.textWidth(e_config, fontsize))/2);
+
+  tft.setTextColor(TFT_ORANGE, TFT_BLACK); // Change the font colour and the background colour
+  tft.setCursor(xpos,ypos,fontsize);
+  tft.println( e_config );
+
+  tft.setTextColor(TFT_RED, TFT_BLACK, false); // Change the font colour and the background colour
+  for (int p = 0; p < 3; p++) {
+    tft.setCursor(xpos+ec_coord[p], ypos-4,fontsize);
+    if (elements_ec[arr_pos][p] > 0) tft.print( String(elements_ec[arr_pos][p]) );
+  }
+
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  // element enw, right
+  if (elements_enw[arr_pos] > 0) {
+    String enw = String(elements_enw[arr_pos], 2U);
+    ypos = 108;
+    tft.setCursor(tft.width()-tft.textWidth(enw)-padding,ypos,fontsize);
+    tft.println( enw );
+  }
+
+  // k alpha, bottom left
+  ypos = 100;
   String klline_names[4] = {"Ka", "Kb", "La", "Lb"};
   for (int i = 0; i < 4; i++) {
     if (i>1) {
@@ -215,87 +271,28 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
     }
   }
 
-  // element name, center
-  ypos = 75;
-  tft.setCursor((tft.width()-tft.textWidth(elements_long[arr_pos], fontsize))/2,ypos,fontsize);
-  tft.println(elements_long[arr_pos]);
-
-  // element enw, right
-  if (elements_enw[arr_pos] > 0) {
-    String enw = String(elements_enw[arr_pos], 2U);
-    ypos = 98;
-    tft.setCursor(tft.width()-tft.textWidth(enw)-padding,ypos,fontsize);
-    tft.println( enw );
-  }
-
   // colored element symbol
   tft.setTextDatum(TC_DATUM); // Top Centre datum
   xpos = tft.width() / 2; // Half the screen width
   tft.loadFont(AA_FONT_LARGE); // Load another different font
 
   tft.setTextColor(TFT_GREEN, TFT_BLACK); // Change the font colour and the background colour
-  tft.drawString(elements_short[arr_pos] , xpos-3, 40);
+  tft.drawString(elements_short[arr_pos] , xpos-3, 35);
   tft.unloadFont(); // Remove the font to recover memory used
-
-  // electron configuration
-  String e_config = "";
-  String e_config_s = "";
-  String pos = "";
-  int glyph_width = tft.textWidth("a"); // font is monospace, therefore constant
-  // {d, s, p} - order changed for simpler display algo.
-  int ec_pos[3] = {3,1,2};
-  if ( atomic_number > shell_K ) {
-    ec_pos[1] += 1;
-    e_config = "[He]";
-    e_config_s = "    ";
-    if ( atomic_number > shell_L + shell_K) {
-      ec_pos[1] += 1; // s
-      ec_pos[2] += 1; // p
-      e_config = "[Ne]";
-      if ( atomic_number > shell_M + shell_L + shell_K ) {
-        ec_pos[1] += 1; // s
-        ec_pos[2] += 1; // p
-        e_config = "[Ar]";
-      }
-    }
-  }
-  // d
-  if (elements_ec[arr_pos][0] > 0 ) {
-    e_config += String(ec_pos[0])+"d";
-    e_config += (elements_ec[arr_pos][0] > 9) ? "  ": " " ;
-    e_config_s += "  " + String(elements_ec[arr_pos][0]);
-  }
-  // s
-  if (elements_ec[arr_pos][1] > 0 ) {
-    e_config += String(ec_pos[1])+"s";
-    e_config += (elements_ec[arr_pos][1] > 9) ? "  ": " " ;
-    e_config_s += "  " + String(elements_ec[arr_pos][1]);
-  }
-  // p
-  if (elements_ec[arr_pos][2] > 0 ) {
-    e_config += String(ec_pos[2])+"p";
-    e_config += (elements_ec[arr_pos][2] > 9) ? "  ": " " ;
-    e_config_s += "  " + String(elements_ec[arr_pos][2]);
-  }
-  ypos = 88;
-  xpos = (int)((tft.width()-tft.textWidth(e_config, fontsize))/2);
-  tft.setCursor(xpos,ypos,fontsize);
-  tft.println( e_config );
-  tft.setCursor(xpos, ypos-2,fontsize);
-  tft.println( e_config_s );
-
 
 
   delay(50);
 
+  // start lamp animation
   int start = 0;
+  int shell_pos = 0;
   if ( animation == 1 ) {
-    int shell_delay = 500;
     if ( atomic_number > shell_K ) {
       start = shell_K;
       for (int k = 0; k < start; k++) {
         enable_lamp( element[k][0], element[k][1], 0, 0 );
       }
+      shell_pos++;
       delay(shell_delay);
 
       if ( atomic_number > shell_L + shell_K) {
@@ -303,6 +300,7 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
         for (int k = 0; k < start; k++) {
           enable_lamp( element[k][0], element[k][1], 0, 0 );
         }
+        shell_pos++;
         delay(shell_delay);
 
         if ( atomic_number > shell_M + shell_L + shell_K ) {
@@ -310,6 +308,7 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
           for (int k = 0; k < start; k++) {
             enable_lamp( element[k][0], element[k][1], 0, 0 );
           }
+          shell_pos++;
           delay(shell_delay);
         }
       }
@@ -319,6 +318,8 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
   for (int k = start; k < atomic_number; k++) {
     enable_lamp( element[k][0], element[k][1], 0, electron_delay );
   }
+
+  delay( shell_delay*(3-shell_pos) + electron_delay * ( 18- (atomic_number - start)) );
 
   Serial.println("----------------");
 }
@@ -443,7 +444,6 @@ void loop() {
       break;
     }
     input = Serial.read();
-    Serial.println(input);
     if ( input > 0 ) {
       an = 36;
     } else {
