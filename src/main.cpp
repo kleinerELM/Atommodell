@@ -3,30 +3,8 @@
 
 // load basic definitions and functions like animations
 #include "atom_model_fkt.h"
-/*
-static const char AUX_AppPage[] PROGMEM = R"(
-{
-  "title": "Atommodell",
-  "uri": "/",
-  "menu": true,
-  "element": [
-    {
-      "name": "caption",
-      "type": "ACText",
-      "value": "<h2>Atommodell</h2>",
-      "style": "text-align:center;color:#2f4f4f;padding:10px;"
-    },
-    {
-      "name": "content",
-      "type": "ACText",
-      "value": "Atommodell NodeMCU32s."
-    }
-  ]
-}
-)";
-*/
 
-
+int input = 0;
 void setup() {
   delay(1000);
   // debug-serial-connection
@@ -44,59 +22,34 @@ void setup() {
   WiFi.softAPConfig(local_ip, gateway, subnet);
   delay(100);
 
-  //server.on("/", handle_OnConnect);
-
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
 
+    Serial.println("blubb");
     int paramsNr = request->params();
-    Serial.println(paramsNr);
 
     for(int i=0;i<paramsNr;i++){
-        //handle_OnConnect();
         AsyncWebParameter* p = request->getParam(i);
-        Serial.print("Param name: ");
+        Serial.print("Parameter: ");
         Serial.println(p->name());
-        Serial.print("Param value: ");
         Serial.println(p->value());
         Serial.println("------");
+
+        if ( p->name() == "e" ) {
+          an = p->value().toInt();
+          if ( an > 0 && an < 37 ) {
+            input = 10;
+            show_element( an, 0, 50 );
+          }
+        }
     }
 
+    Serial.println("html request");
     request->send(200, "text/html", SendHTML());
   });
-
-  //server.on("/led1on", handle_led1on);
-  //server.onNotFound(handle_NotFound);
 
   server.begin();
   Serial.println("HTTP server started");
   Serial.println("HTTPServer ready: http://" + local_ip.toString() + "/update" );
-
-/*
-  // Prepare the ESP8266HTTPUpdateServer
-  // The /update handler will be registered during this function.
-  //httpUpdater.setup(&httpServer, USERNAME, PASSWORD);
-
-  Config.autoReset = false;     // Not reset the module even by intentional disconnection using AutoConnect menu.
-  Config.autoReconnect = false;  // Reconnect to known access points.
-  //Config.reconnectInterval = 6; // Reconnection attempting interval is 3[min].
-  Config.retainPortal = true;   // Keep the captive portal open.
-  portal.config(Config);
-  // deleteAllCredentials();
-
-  // Load a custom web page for a sketch and a dummy page for the updater.
-  //hello.load(AUX_AppPage);
-  //portal.join({ hello, update });
-  //if (portal.begin()) { // code stops if not able to connect to wifi... this sucks!
-    if (MDNS.begin(host)) {
-        MDNS.addService("http", "tcp", HTTP_PORT);
-        Serial.println(" WiFi connected!?");
-        Serial.println(" HTTPUpdateServer ready: http://" + WiFi.localIP().toString() + "/update" );
-        Serial.println();
-    }
-    else
-      Serial.println("Error setting up MDNS responder");
-  //}
-*/
 
   Serial.println("-PCF8574-");
   Serial.print("PCF8574_LIB_VERSION:\t");
@@ -133,7 +86,6 @@ void setup() {
 
   // ESP32 will crash if any of the fonts are missing
   bool font_missing = false;
-  if (SPIFFS.exists("/NotoSansBold15.vlw")    == false) font_missing = true;
   if (SPIFFS.exists("/NotoSansBold36.vlw")    == false) font_missing = true;
 
   if (font_missing) {
@@ -148,10 +100,6 @@ void setup() {
 
   delay(1000);
 }
-
-
-
-
 
 void loop() {
   /*
@@ -174,71 +122,66 @@ void loop() {
   */
   // standard function, iterate through elements
 
-  int input = 0;
-  for (an = 1; an < 37; an++ ) {
-    show_element( an, 1 );
-    while(Serial.available() == 0) {
-      delay(1000);
-      break;
-    }
-    input = Serial.read();
-    if ( input > 0 ) {
-      an = 36;
-    } else {
-      input = 0;
-    }
-  }
+  if ( WiFi.softAPgetStationNum() == 0 ) {
+    for (an = 1; an < 37; an++ ) {
+      if ( WiFi.softAPgetStationNum() == 0 ) {
 
-  if ( input > 0 ) {
-    char line[3];
-    char el_short[2];
-    int done  = 0;
-    int count = 0;
-
-    Serial.println( "Welches Element soll angezeigt werden? [c] zum Abbrechen" );
-    while (done == 0) {
-      if (Serial.available() > 0) {
-          line[count] = (char)Serial.read();
-
-          if (line[count] == '\r'){
-            done = 1;
-          } else {
-            el_short[count] = line[count];
-            if (count == 1) {
-              done = 1;
-            } else {
-              el_short[count+1]= '\0';
-            }
-          }
-          count += 1;
-      }
-    }
-
-    if (el_short != "c") {
-      bool found = false;
-      for (an = 1; an < 37; an++ ) {
-        if( elements_short[an-1] == el_short) {
-          found = true;
-          show_element( an, 0, 50 );
-          delay(10000);
+        show_element( an, 1 );
+        while(Serial.available() == 0) {
+          delay(1000);
           break;
         }
-      }
-
-      if (!found) {
-        Serial.println("ELement '" + String(el_short) + "' nicht gefunden! Verfügbare Elemente:" );
-        for (an = 1; an < 37; an++ ) {
-          Serial.print(elements_short[an-1] + ' ');
+        input = Serial.read();
+        if ( input > 0 ) {
+          an = 36;
+        } else {
+          input = 0;
         }
-      Serial.println("");
+      } else {
+        Serial.print( WiFi.softAPgetStationNum() );
+        Serial.println( " client(s) are connected! Stopping animation." );
+        break;
       }
-    } else {
-      Serial.println("canceling operation. Back to loop animation.");
     }
 
-  } else {
-    Serial.println();
-    Serial.println("---loop done---");
-    delay(5000);
+    if ( input > 0 ) {
+      char line[3];
+      char el_short[2];
+      int done  = 0;
+      int count = 0;
+
+      Serial.println( "Welches Element soll angezeigt werden? [c] zum Abbrechen" );
+      while (done == 0) {
+        if (Serial.available() > 0) {
+            line[count] = (char)Serial.read();
+
+            if (line[count] == '\r'){
+              done = 1;
+            } else {
+              el_short[count] = line[count];
+              if (count == 1) {
+                done = 1;
+              } else {
+                el_short[count+1]= '\0';
+              }
+            }
+            count += 1;
+        }
+      }
+
+      if (el_short != "c") {
+        show_element_by_short( el_short );
+
+      } else {
+        Serial.println("canceling operation. Back to loop animation.");
+      }
+
+    } else {
+      Serial.println();
+      Serial.println("---loop done---");
+      delay(5000);
+    }
+    input = 0;
   }
+  delay(50);
 }
