@@ -18,3 +18,7 @@ Das Original war über ein einfaches Schaltfeld steuerbar. In der aktuellen Vers
  - 37x 6 V E10 Glühbirnen (betrieben auf 2,9 V)
 
 https://github.com/kleinerELM/Atommodell/blob/main/assets/old.mp4?raw=true
+
+## Software
+
+Das Projekt nutzt das SPIFFS Filesystem für Schriftarten und HTML-Templates. Daher musst zuerst "Build Filesystem Image" und im Anschlusss "Upload Filesystem Image" unter "Platform" ausgeführt werden.

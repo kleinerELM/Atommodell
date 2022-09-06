@@ -1,51 +1,9 @@
 // written by Florian Kleiner 2022
 // https://github.com/kleinerELM/Atommodell
 
-#include <Arduino.h>
-
-#if defined(ARDUINO_ARCH_ESP8266)
-  #include <ESP8266WiFi.h>
-  #include <ESP8266WebServer.h>
-  #include <ESP8266mDNS.h>
-  #include <ESP8266HTTPUpdateServer.h>
-  #define HOSTIDENTIFY  "esp8266"
-  #define mDNSUpdate(c)  do { c.update(); } while(0)
-  using WebServerClass = ESP8266WebServer;
-  using HTTPUpdateServerClass = ESP8266HTTPUpdateServer;
-#elif defined(ARDUINO_ARCH_ESP32)
-  #include <WiFi.h>
-  #include <WebServer.h>
-  #include <ESPmDNS.h>
-  #include "HTTPUpdateServer.h"
-  #define HOSTIDENTIFY  "atommodell"
-  #define mDNSUpdate(c)  do {} while(0)
-  using WebServerClass = WebServer;
-  using HTTPUpdateServerClass = HTTPUpdateServer;
-#endif
-#include <WiFiClient.h>
-#include <AutoConnect.h>
-
-// Fix hostname for mDNS. It is a requirement for the lightweight update feature.
-static const char* host = HOSTIDENTIFY "-webupdate";
-#define HTTP_PORT 80
-
-// ESP8266WebServer instance will be shared both AutoConnect and UpdateServer.
-WebServerClass  httpServer(HTTP_PORT);
-
-#define USERNAME "Florian"           //*< Replace the actual username you want */
-#define PASSWORD "legitupdatepass"   //*< Replace the actual password you want */
-
-// Declare AutoConnectAux to bind the HTTPWebUpdateServer via /update url
-// and call it from the menu.
-// The custom web page is an empty page that does not contain AutoConnectElements.
-// Its content will be emitted by ESP8266HTTPUpdateServer.
-HTTPUpdateServerClass httpUpdater;
-AutoConnectAux  update("/update", "Update");
-
-// Declare AutoConnect and the custom web pages for an application sketch.
-AutoConnect     portal(httpServer);
-AutoConnectAux  hello;
-
+// load basic definitions and functions like animations
+#include "atom_model_fkt.h"
+/*
 static const char AUX_AppPage[] PROGMEM = R"(
 {
   "title": "Atommodell",
@@ -66,263 +24,8 @@ static const char AUX_AppPage[] PROGMEM = R"(
   ]
 }
 )";
+*/
 
-
-//#define AA_FONT_SMALL "NotoSansBold15"
-#define AA_FONT_LARGE "NotoSansBold36"
-
-// Font files are stored in SPIFFS, so load the library
-#include <FS.h>
-
-// pins & display type are defined in platformio.ini
-#include <TFT_eSPI.h>
-#include <SPI.h>
-
-TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
-
-#include "PCF8574.h"
-/*PCF8574 PCF_1(0x25);
-PCF8574 PCF_2(0x22);
-PCF8574 PCF_3(0x20);
-PCF8574 PCF_4(0x23);*/
-PCF8574 PCF[] = {PCF8574(0x25), PCF8574(0x22), PCF8574(0x20), PCF8574(0x21)};
-
-// pins for 5V relais
-#define R1 12
-#define R2 14
-#define R3 27
-#define R4 26
-int direct_to_relais[4] = { R1, R2, R3, R4 };
-
-                    //          1           2
-int element[36][2] = { {  4, R3 }, {  4, R4 }, // 1, 2
-
-                    //          3           4           5           6           7           8           9          10
-                       {  4, R1 }, {  0,  5 }, {  1,  6 }, {  1,  0 }, {  4, R2 }, {  0,  7 }, {  1,  7 }, {  0,  6 },
-
-                    //         11          12          13          14          15          16          17          18          19
-                       {  2,  5 }, {  3,  4 }, {  2,  4 }, {  3,  3 }, {  2,  3 }, {  3,  2 }, {  0,  0 }, {  1,  1 }, {  0,  1 },
-
-                    //         20          21          22          23          24          25          26          27          28
-                       {  1,  2 }, {  0,  2 }, {  1,  3 }, {  0,  3 }, {  3,  7 }, {  2,  7 }, {  3,  6 }, {  2,  6 }, {  3,  5 },
-
-                    //         29          30          31          32          33          34          35          36
-                       {  2,  1 }, {  3,  1 }, {  2,  2 }, {  1,  4 }, {  0,  4 }, {  1,  5 }, {  2,  0 }, {  3,  0 } };
-
-String elements_short[36] = {  "H", "He", "Li", "Be",  "B",  "C",  "N",  "O",  "F",
-                             "Ne", "Na", "Mg", "Al", "Si",  "P",  "S", "Cl", "Ar",
-                              "K", "Ca", "Sc", "Ti",  "V", "Cr", "Mn", "Fe", "Co",
-                             "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr" };
-
-String elements_long[36] = { "Wasserstoff", "Helium", "Lithium", "Beryllium", "Bor", "Kohlenstoff", "Stickstoff", "Sauerstoff", "Fluor",
-                             "Neon", "Natrium", "Magnesium", "Aluminium", "Silizium", "Phosphor", "Schwefel", "Chlor", "Argon",
-                             "Kalium", "Calcium", "Scantium", "Titan", "Vanadium", "Chrom", "Mangan", "Eisen", "Cobalt",
-                             "Nickel", "Kupfer", "Zink", "Gallium", "Germanium", "Arsen", "Selen", "Brom", "Krypton" };
-
-float elements_mass[36] = { 1.0080, 4.0026, 6.94, 9.0122, 10.81, 12.011, 14.007, 15.999, 18.998,
-                            20.180, 22.990, 24.305, 26.982, 28.085, 30.974, 32.06, 35.45, 39.948,
-                            39.098, 40.078, 44.954, 47.867, 50.942, 51.996, 54.938, 55.845, 58.933,
-                            58.693, 63.546, 65.380, 69.723, 72.630, 74.922, 78.971, 79.904, 83.798 };
-
-float elements_kl[36][4] = { {0,0,0,0}, {0,0,0,0}, {0,0,0,0}, {0.109,0,0,0}, {0.183,0,0,0}, {0.277,0,0,0}, {0.392,0,0,0}, {0.525,0,0,0}, {0.677,0,0,0},
-                             {0.848,0,0,0}, {1.041,1.067,0,0}, {1.253,1.302,0,0}, {1.486,1.557,0,0}, {1.739,1.836,0,0}, {2.013,2.139,0,0}, {2.307,2.464,0,0}, {2.621,2.815,0,0}, {2.957,3.190,0,0},
-                             {3.312,3.589,0,0}, {3.690,4.012,0.341,0.345}, {4.088,4.460,0.395,0.400}, {4.508,4.931,0.452,0.458}, {4.949,5.426,0.511,0.519}, {5.411,5.946,0.573,0.583}, {5.894,6.489,0.637,0.649}, {6.398,7.057,0.705,0.718}, {6.924,7.648,0.776,0.791},
-                             {7.471,8.263,0.851,0.869}, {8.040,8.904,0.930,0.950}, {8.630,9.570,1.012,1.043}, {9.241,10.263,1.098,1.125}, {9.874,10.980,1.188,1.218}, {10.530,11.724,1.282,1.317}, {11.207,12.949,1.379,1.419}, {11.907,13.289,1.480,1.526}, {12.631,14.110,1.586,1.636} };
-
-float elements_enw[36] = { 2.2, 0, 0.98, 1.57, 2.04, 2.55, 3.07, 3.58, 3.98,
-                           0, 0.9, 1.31, 1.61, 1.90, 2.19, 2.58, 3.16, 0,
-                           0.82, 1.00, 1.36, 1.54, 1.63, 1.66, 1.55, 1.8, 1.88,
-                           1.71, 1.90, 1.65, 1.81, 2.01, 2.18, 2.55, 2.96, 0 };
-
-// {d, s, p} - order changed for simpler display algo.
-String ecn[3] = {"d", "s", "p"};
-int8_t elements_ec[36][3] = { {0,1,0},{0,2,0},{0,1,0},{0,2,0},{0,2,1},{0,2,2},{0,2,3},{0,2,4},{0,2,5},
-                             {0,2,6}, {0,1,0},{0,2,0},{0,2,1},{0,2,2},{0,2,3},{0,2,4},{0,2,5},
-                             {0,2,6}, {0,1,0},{0,2,0},{1,2,0},{2,2,0},{3,2,0},{5,1,0},{5,2,0},{6,2,0},{7,2,0},
-                             {8,2,0},{10,1,0},{10,2,0},{10,2,1},{10,2,2},{10,2,3},{10,2,4},{10,2,5},{10,2,6} };
-
-#define shell_K  2
-#define shell_L  8
-#define shell_M 18
-#define shell_N  8
-
-void enable_lamp( int pcf_id, int pos, int state, int wait ) {
-    if ( pcf_id != 4 ) {
-      if ( state == 1 ) {
-        PCF[pcf_id].write(pos, 1);
-      } else {
-        PCF[pcf_id].write(pos, 0);
-      }
-    } else {
-      if ( state == 1 ) {
-        digitalWrite(pos, HIGH);
-      } else {
-        digitalWrite(pos, LOW);
-      }
-    }
-    delay( wait );
-
-}
-
-void show_element( int atomic_number, int animation = 0, int electron_delay = 100 ) {
-  int arr_pos = atomic_number-1;
-  int shell_delay = 500;
-  int fontsize = 1;
-  int padding = 5;
-  int xpos = padding;
-  int ypos = padding;
-
-  Serial.println();
-  Serial.println("----------------");
-  Serial.println("Zeige " + elements_long[arr_pos] + " / " + elements_short[arr_pos] + " (#" + String( atomic_number ) + ")");
-
-  for (int k = 0; k < 36; k++) {
-    enable_lamp( element[k][0], element[k][1], 1, 0 );
-  }
-
-  tft.fillScreen(TFT_BLACK);
-
-  tft.drawRect(1,1,tft.width()-1,tft.height()-1,TFT_WHITE);
-
-  u_int8_t char_width = tft.textWidth(" ", fontsize);
-  // atomic number, top left
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.setCursor(padding,padding,fontsize);
-  tft.println(String(atomic_number));
-
-  // element mass, top right
-  String mass = String(elements_mass[arr_pos],4U);
-  tft.setCursor(tft.width()-tft.textWidth(mass,1)-padding,padding,1);
-  tft.println(mass);
-
-  // element name, center
-  ypos = 75;
-  tft.setCursor((tft.width()-tft.textWidth(elements_long[arr_pos], fontsize))/2,ypos,fontsize);
-  tft.println(elements_long[arr_pos]);
-
-  // electron configuration
-  String e_config = "";
-  String pos = "";
-  int glyph_width = tft.textWidth("a"); // font is monospace, therefore constant
-  // {d, s, p} - order changed for simpler display algo.
-  int ec_pos[3] = {3,1,2};
-  if ( atomic_number > 2 ) {
-    ec_pos[1] += 1;
-    e_config = "[He] ";
-    if ( atomic_number > 10) {
-      ec_pos[1] += 1; // s
-      ec_pos[2] += 1; // p
-      e_config = "[Ne] ";
-      if ( atomic_number > 18 ) {
-        ec_pos[1] += 1; // s
-        ec_pos[2] += 1; // p
-        e_config = "[Ar] ";
-      }
-    }
-  }
-  u_int8_t ec_coord[3] = {0,0,0};
-  for (int p = 0; p < 3; p++) {
-    if (elements_ec[arr_pos][p] > 0 ) {
-      e_config += String(ec_pos[p])+ecn[p];
-      ec_coord[p] = e_config.length()*char_width;
-      e_config += (elements_ec[arr_pos][p] > 9) ? "  ": " " ;
-    }
-  }
-
-  ypos = 90;
-  xpos = (int)((tft.width()-tft.textWidth(e_config, fontsize))/2);
-
-  tft.setTextColor(TFT_ORANGE, TFT_BLACK); // Change the font colour and the background colour
-  tft.setCursor(xpos,ypos,fontsize);
-  tft.println( e_config );
-
-  tft.setTextColor(TFT_RED, TFT_BLACK, false); // Change the font colour and the background colour
-  for (int p = 0; p < 3; p++) {
-    tft.setCursor(xpos+ec_coord[p], ypos-4,fontsize);
-    if (elements_ec[arr_pos][p] > 0) tft.print( String(elements_ec[arr_pos][p]) );
-  }
-
-
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  // element enw, right
-  if (elements_enw[arr_pos] > 0) {
-    String enw = String(elements_enw[arr_pos], 2U);
-    ypos = 108;
-    tft.setCursor(tft.width()-tft.textWidth(enw)-padding,ypos,fontsize);
-    tft.println( enw );
-  }
-
-  // k alpha, bottom left
-  ypos = 100;
-  String klline_names[4] = {"Ka", "Kb", "La", "Lb"};
-  for (int i = 0; i < 4; i++) {
-    if (i>1) {
-      // L-lines are less relevant for Elements below atomic number of 52
-      tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    }
-    ypos += 8;
-    tft.setCursor(padding,ypos,fontsize);
-    String kllines = klline_names[i] + ": ";
-    if ( elements_kl[arr_pos][i] > 0 ) {
-      kllines += String(elements_kl[arr_pos][i],3U);
-      tft.println(kllines);
-    } else {
-      break;
-    }
-  }
-
-  // colored element symbol
-  tft.setTextDatum(TC_DATUM); // Top Centre datum
-  xpos = tft.width() / 2; // Half the screen width
-  tft.loadFont(AA_FONT_LARGE); // Load another different font
-
-  tft.setTextColor(TFT_GREEN, TFT_BLACK); // Change the font colour and the background colour
-  tft.drawString(elements_short[arr_pos] , xpos-3, 35);
-  tft.unloadFont(); // Remove the font to recover memory used
-
-
-  delay(50);
-
-  // start lamp animation
-  int start = 0;
-  int shell_pos = 0;
-  if ( animation == 1 ) {
-    if ( atomic_number > shell_K ) {
-      start = shell_K;
-      for (int k = 0; k < start; k++) {
-        enable_lamp( element[k][0], element[k][1], 0, 0 );
-      }
-      shell_pos++;
-      delay(shell_delay);
-
-      if ( atomic_number > shell_L + shell_K) {
-        start += shell_L;
-        for (int k = 0; k < start; k++) {
-          enable_lamp( element[k][0], element[k][1], 0, 0 );
-        }
-        shell_pos++;
-        delay(shell_delay);
-
-        if ( atomic_number > shell_M + shell_L + shell_K ) {
-          start += shell_M;
-          for (int k = 0; k < start; k++) {
-            enable_lamp( element[k][0], element[k][1], 0, 0 );
-          }
-          shell_pos++;
-          delay(shell_delay);
-        }
-      }
-    }
-  }
-
-  for (int k = start; k < atomic_number; k++) {
-    enable_lamp( element[k][0], element[k][1], 0, electron_delay );
-  }
-
-  delay( shell_delay*(3-shell_pos) + electron_delay * ( 18- (atomic_number - start)) );
-
-  Serial.println("----------------");
-}
 
 void setup() {
   delay(1000);
@@ -331,31 +34,69 @@ void setup() {
 
   Serial.println();
   Serial.println();
-  Serial.println("---Atommodell---");
+  Serial.println("---" CONTROLLER_NAME "---");
   Serial.println("last build: " __DATE__ ", " __TIME__);
   Serial.println();
 
-
   Serial.println("-WiFi-");
 
+  WiFi.softAP(ssid, password);
+  WiFi.softAPConfig(local_ip, gateway, subnet);
+  delay(100);
+
+  //server.on("/", handle_OnConnect);
+
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+
+    int paramsNr = request->params();
+    Serial.println(paramsNr);
+
+    for(int i=0;i<paramsNr;i++){
+        //handle_OnConnect();
+        AsyncWebParameter* p = request->getParam(i);
+        Serial.print("Param name: ");
+        Serial.println(p->name());
+        Serial.print("Param value: ");
+        Serial.println(p->value());
+        Serial.println("------");
+    }
+
+    request->send(200, "text/html", SendHTML());
+  });
+
+  //server.on("/led1on", handle_led1on);
+  //server.onNotFound(handle_NotFound);
+
+  server.begin();
+  Serial.println("HTTP server started");
+  Serial.println("HTTPServer ready: http://" + local_ip.toString() + "/update" );
+
+/*
   // Prepare the ESP8266HTTPUpdateServer
   // The /update handler will be registered during this function.
-  httpUpdater.setup(&httpServer, USERNAME, PASSWORD);
+  //httpUpdater.setup(&httpServer, USERNAME, PASSWORD);
+
+  Config.autoReset = false;     // Not reset the module even by intentional disconnection using AutoConnect menu.
+  Config.autoReconnect = false;  // Reconnect to known access points.
+  //Config.reconnectInterval = 6; // Reconnection attempting interval is 3[min].
+  Config.retainPortal = true;   // Keep the captive portal open.
+  portal.config(Config);
+  // deleteAllCredentials();
 
   // Load a custom web page for a sketch and a dummy page for the updater.
-  hello.load(AUX_AppPage);
-  portal.join({ hello, update });
-  if (portal.begin()) { // code stops if not able to connect to wifi... this sucks!
-    Serial.println("1");
+  //hello.load(AUX_AppPage);
+  //portal.join({ hello, update });
+  //if (portal.begin()) { // code stops if not able to connect to wifi... this sucks!
     if (MDNS.begin(host)) {
         MDNS.addService("http", "tcp", HTTP_PORT);
-        Serial.println(" WiFi connected!");
-        Serial.printf( " HTTPUpdateServer ready: http://%s.local/update\n", host);
+        Serial.println(" WiFi connected!?");
+        Serial.println(" HTTPUpdateServer ready: http://" + WiFi.localIP().toString() + "/update" );
         Serial.println();
     }
     else
       Serial.println("Error setting up MDNS responder");
-  }
+  //}
+*/
 
   Serial.println("-PCF8574-");
   Serial.print("PCF8574_LIB_VERSION:\t");
@@ -378,7 +119,7 @@ void setup() {
 
   for (int i = 0 ; i < 4 ; i++) {
     pinMode(direct_to_relais[i], OUTPUT);
-    digitalWrite(direct_to_relais[i], LOW);
+    digitalWrite(direct_to_relais[i], HIGH);
   }
 
   tft.init();
@@ -395,8 +136,7 @@ void setup() {
   if (SPIFFS.exists("/NotoSansBold15.vlw")    == false) font_missing = true;
   if (SPIFFS.exists("/NotoSansBold36.vlw")    == false) font_missing = true;
 
-  if (font_missing)
-  {
+  if (font_missing) {
     Serial.println("\r\nFont missing in SPIFFS, did you upload it?");
   }
   else Serial.println("\r\nFonts found OK.");
@@ -408,6 +148,10 @@ void setup() {
 
   delay(1000);
 }
+
+
+
+
 
 void loop() {
   /*
@@ -430,13 +174,7 @@ void loop() {
   */
   // standard function, iterate through elements
 
-
-
-
-
-
   int input = 0;
-  int an = 0;
   for (an = 1; an < 37; an++ ) {
     show_element( an, 1 );
     while(Serial.available() == 0) {
