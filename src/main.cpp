@@ -36,16 +36,19 @@ void setup() {
           }
         }
     }
-    if ( an > 0 && an < 37 ) {
-      show_element( an, 1, 50 );
+    if (!( an > 0 && an < 37 ) ) {
+      an = 1;
     }
     Serial.println("html request");
-    request->send(200, "text/html", SendHTML());
+    request->send(200, "text/html", SendHTML( an ));
+    // causes watchdog issues with a delay
+    // https://stackoverflow.com/questions/66278271/task-watchdog-got-triggered-the-tasks-did-not-reset-the-watchdog-in-time
+    show_element( an, 1, 0);//50 );
 
   });
   server.on("/element", HTTP_GET, [](AsyncWebServerRequest *request){
 
-    Serial.println("loading element");
+    Serial.print("loading element#");
     int paramsNr = request->params();
     int an = 0;
     for(int i=0;i<paramsNr;i++){
@@ -54,12 +57,16 @@ void setup() {
           an = p->value().toInt();
         }
     }
-    if ( an > 0 && an < 37 ) {
-      show_element( an, 1, 50 );
-      Serial.println("html request");
-      request->send(200, "text/html", AjaxElement());
+    Serial.println(an);
+    if (!( an > 0 && an < 37 ) ) {
+      an = 1;
     }
-
+    Serial.println(an);
+    Serial.println("html request");
+    request->send(200, "text/html", process_element_html( an ));
+    // causes watchdog issues with a delay
+    // https://stackoverflow.com/questions/66278271/task-watchdog-got-triggered-the-tasks-did-not-reset-the-watchdog-in-time
+    show_element( an, 1, 50 );
   });
 
 

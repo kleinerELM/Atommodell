@@ -4,56 +4,11 @@
 // load basic hardware and PSE definitions
 #include "atom_model_defs.h"
 
-String SendHTML(){
-  String content      = "";
-  File template_file  = SPIFFS.open("/PSE.html");
-  File element_file   = SPIFFS.open("/element.html");
-
-  Serial.println("SendHTML");
-  if (!template_file || !element_file) {
-    content = "Error loading template!";
-  } else {
-    int arr_pos = an-1;
-    String element_main = element_file.readString();
-
-    element_main.replace( "%1%", String(elements_enw[arr_pos], 2U) );
-    element_main.replace( "%2%", elements_short[arr_pos] );
-    element_main.replace( "%3%", elements_long[arr_pos] );
-    element_main.replace( "%4%", String( an ) );
-    element_main.replace( "%5%", String( elements_mass[arr_pos] ) );
-
-    String klline_names[4] = {"K<sub>&alpha;</sub>", "K<sub>&beta;</sub>", "L<sub>&alpha;</sub>", "L<sub>&beta;</sub>"};
-    String line_strings[4] = {"","","",""};
-    for (int i = 0; i < 4; i++) {
-      line_strings[i] = klline_names[i] + ": ";
-      if ( elements_kl[arr_pos][i] > 0 ) {
-        line_strings[i] += String(elements_kl[arr_pos][i],3U);
-      } else {
-        break;
-      }
-    }
-    element_main.replace( "%6%", String( line_strings[0] ) );
-    element_main.replace( "%7%", String( line_strings[1] ) );
-    element_main.replace( "%8%", String( line_strings[2] ) );
-    element_main.replace( "%9%", String( line_strings[3] ) );
-
-    content      = template_file.readString();
-    content.replace( "%1%", String(CONTROLLER_NAME) );
-    content.replace( "/?e=", "http://" + local_ip.toString() + "/?e=" );
-    content.replace( "%2%", element_main );
-  }
-  template_file.close();
-  element_file.close();
-  Serial.println(elements_long[an-1] + " (" + elements_short[an-1] + ")");
-
-  return content;
-}
-
-String AjaxElement( ) {
+String process_element_html( int an ) {
   String element_main      = "";
   File element_file   = SPIFFS.open("/element.html");
 
-  Serial.println("AjaxElement");
+  Serial.println("loading Element html");
   if (!element_file) {
     element_main = "Error loading template!";
   } else {
@@ -79,12 +34,30 @@ String AjaxElement( ) {
     element_main.replace( "%8%", String( line_strings[2] ) );
     element_main.replace( "%9%", String( line_strings[3] ) );
 
+    Serial.println(elements_long[an-1] + " (" + elements_short[an-1] + ")");
   }
   element_file.close();
 
   return element_main;
 }
 
+String SendHTML( int an ){
+  String content      = "";
+  File template_file  = SPIFFS.open("/PSE.html");
+
+  Serial.println("SendHTML");
+  if (!template_file) {
+    content = "Error loading template!";
+  } else {
+    content      = template_file.readString();
+    content.replace( "%1%", String(CONTROLLER_NAME) );
+    content.replace( "/?e=", "http://" + local_ip.toString() + "/?e=" );
+    content.replace( "%2%", process_element_html( an ) );
+  }
+  template_file.close();
+
+  return content;
+}
 void enable_lamp( int pcf_id, int pos, int state, int wait ) {
     if ( pcf_id != 4 ) {
       if ( state == 1 ) {

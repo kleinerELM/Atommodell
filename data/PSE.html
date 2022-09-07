@@ -1,7 +1,7 @@
 <!DOCTYPE html> <html>
 	<head>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-		<title>%1</title>
+		<title>%1%</title>
 		<style>
 			html { font-family: Helvetica;
 				display: inline-block;
@@ -11,7 +11,7 @@
 			}
 			body{margin-top: 25px;
 				background-color:#000;}
-			h1 {color: #444444;
+			h1 {
 				margin: 15px;
 				font-size: 7em;
 			}
@@ -50,7 +50,7 @@
 				margin: 2rem auto;
 				width: 15em;
 				border-radius: 5px;
-				border:1px solid rgb(240, 240, 240);
+				border:1px solid;
 				text-shadow: 0 0 0.4vw currentColor;
 			}
 			#element_main .details {
@@ -102,24 +102,8 @@
 		<script type='text/javascript' src='./jquery.js'></script>
 		<script>
 
-function remove_url_par(url, par) {
-	var fname = arguments.callee.name;
-	var urlparts=url.split('?');
-	if (urlparts.length>=2) {
-	    var prefix=encodeURIComponent(par)+'=';
-	    var pars=urlparts[1].split(/[&;]/g);
-
-	    for (var i=pars.length; i-- > 0;) {
-			if (pars[i].lastIndexOf(prefix, 0) !== -1)  pars.splice(i, 1);
-	    }
-	    url=urlparts[0]+'?'+pars.join('&');
-	}
-	return url;
-}
-
 function set_url_par(par, value) {
-	url = window.location.href;
-	url = remove_url_par(url, par) + '?' + par + '=' + value;
+	url =  window.location.protocol + '//' + window.location.hostname +  '/?' + par + '=' + value;
 	window.history.replaceState({ id: "100" }, par, url );
 }
 
@@ -131,7 +115,7 @@ $(function(){
 		set_url_par('e', e.target.id);
 		$('#element_main').removeClass('.nonmetal noblegas tran-met alkali earth metaloids metals halogen');
 		$('#element_main').addClass(e.target.className);
-		var url = window.location.href.split('?')[0] + 'element?e='+e.target.id;
+		var url = window.location.protocol + '//' + window.location.hostname + '/element?e='+e.target.id;
 
 		console.log(url);
 
