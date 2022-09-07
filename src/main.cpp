@@ -22,30 +22,46 @@ void setup() {
   WiFi.softAPConfig(local_ip, gateway, subnet);
   delay(100);
 
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
 
-    Serial.println("blubb");
+  server.serveStatic("/", SPIFFS, "/");//.setDefaultFile("PSE.html");
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     int paramsNr = request->params();
+
 
     for(int i=0;i<paramsNr;i++){
         AsyncWebParameter* p = request->getParam(i);
-        Serial.print("Parameter: ");
-        Serial.println(p->name());
-        Serial.println(p->value());
-        Serial.println("------");
-
         if ( p->name() == "e" ) {
           an = p->value().toInt();
           if ( an > 0 && an < 37 ) {
-            input = 10;
-            show_element( an, 0, 50 );
           }
         }
     }
-
+    if ( an > 0 && an < 37 ) {
+      show_element( an, 1, 50 );
+    }
     Serial.println("html request");
     request->send(200, "text/html", SendHTML());
+
   });
+  server.on("/element", HTTP_GET, [](AsyncWebServerRequest *request){
+
+    Serial.println("loading element");
+    int paramsNr = request->params();
+    int an = 0;
+    for(int i=0;i<paramsNr;i++){
+        AsyncWebParameter* p = request->getParam(i);
+        if ( p->name() == "e" ) {
+          an = p->value().toInt();
+        }
+    }
+    if ( an > 0 && an < 37 ) {
+      show_element( an, 1, 50 );
+      Serial.println("html request");
+      request->send(200, "text/html", AjaxElement());
+    }
+
+  });
+
 
   server.begin();
   Serial.println("HTTP server started");

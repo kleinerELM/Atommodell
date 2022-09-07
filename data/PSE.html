@@ -2,153 +2,206 @@
 	<head>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 		<title>%1</title>
+		<style>
+			html { font-family: Helvetica;
+				display: inline-block;
+				margin: 0px auto;
+				text-align: center;
+				color:#dddddd;
+			}
+			body{margin-top: 25px;
+				background-color:#000;}
+			h1 {color: #444444;
+				margin: 15px;
+				font-size: 7em;
+			}
+			h4 {
+				position: fixed;
+				text-align: center;
+				width: 100%;
+				margin: 0;
+			}
+			table {
+				margin:auto;
+				color:#fff;
+				text-align:center;
+				border-style:hidden;
+				font-family: sans-serif;
+				text-align:center;
+				width:100%;
+				font-size: calc(11px + 0.390625vw);
+				text-shadow: 0 0 0.4vw currentColor;
+			}
+			td {
+				width: 6vw;
+			}
+			td div {
+				position:relative;
+				overflow:hidden;
+				text-align: center;
+			}
+			td span {
+				cursor:pointer;
+			}
+			#element-long {
+				margin-bottom: 1em;
+			}
+			#element_main {
+				margin: 2rem auto;
+				width: 15em;
+				border-radius: 5px;
+				border:1px solid rgb(240, 240, 240);
+				text-shadow: 0 0 0.4vw currentColor;
+			}
+			#element_main .details {
+				text-align: justify;
+				width: 95%;
+				display: flex;
+				justify-content: space-between;
+				margin: 5px auto;
+			}
+			table td div {
+				padding: calc(7px + 0.5vw) 0;
+				border: 1px solid #fff;
+				border-radius: 3px;
+			}
+			.nonmetal {
+				border-color:LimeGreen;
+				color:LimeGreen;
+			}
+			.noblegas {
+				border-color:LightskyBlue;
+				color:LightskyBlue;
+			}
+			.tran-met {
+				border-color:LightCoral;
+				color:LightCoral;
+			}
+			.alkali {
+				border-color:OrangeRed;
+				color:OrangeRed;
+			}
+			.earth {
+				border-color:DarkOrange;
+				color:DarkOrange;
+			}
+			.metaloids {
+				border-color:Peru;
+				color:Peru;
+			}
+			.metals {
+				border-color:DarkGray;
+				color:DarkGray;
+			}
+			.halogen{
+				border-color:Khaki;
+				color:Khaki;
+			}
+		</style>
+
+		<script type='text/javascript' src='./jquery.js'></script>
+		<script>
+
+function remove_url_par(url, par) {
+	var fname = arguments.callee.name;
+	var urlparts=url.split('?');
+	if (urlparts.length>=2) {
+	    var prefix=encodeURIComponent(par)+'=';
+	    var pars=urlparts[1].split(/[&;]/g);
+
+	    for (var i=pars.length; i-- > 0;) {
+			if (pars[i].lastIndexOf(prefix, 0) !== -1)  pars.splice(i, 1);
+	    }
+	    url=urlparts[0]+'?'+pars.join('&');
+	}
+	return url;
+}
+
+function set_url_par(par, value) {
+	url = window.location.href;
+	url = remove_url_par(url, par) + '?' + par + '=' + value;
+	window.history.replaceState({ id: "100" }, par, url );
+}
+
+var request;
+$(function(){
+	$('#PSE div').click(function( e ) {
+		if (request) { request.abort(); }
+
+		set_url_par('e', e.target.id);
+		$('#element_main').removeClass('.nonmetal noblegas tran-met alkali earth metaloids metals halogen');
+		$('#element_main').addClass(e.target.className);
+		var url = window.location.href.split('?')[0] + 'element?e='+e.target.id;
+
+		console.log(url);
+
+		request = $.ajax({
+			url:	url,
+			type:	'get'
+		});
+
+		request.done(function (response, status, jqXHR){
+			console.log(response);
+			$('#element_main').html(response);
+		});
+	});
+});
+
+		</script>
 	</head>
 	<body>
+
 	<h4 id="controller">%1%</h4>
-	<div id="element_main">
-		<div style="text-align: justify; width: 95%; display: flex;justify-content: space-between;margin: 5px auto;"><span>%4%</span> <span>%5%</span></div>
-		<h1 id="element">%2%</h1>
-		<div id="element-long">%3%</div>
-	</div>
 
-	<style>
-		html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}
-		body{margin-top: 25px;
-			background-color:#ffffff;}
-		h1 {color: #444444;
-			margin: 15px;
-			font-size: 7em;
-		}
-		table {
-			margin:auto;
-			color:#000000;
-			text-align:center;
-			empty-cells:show;
-			border-collapse:separate;
-			border-style:hidden;
-			font-family: sans-serif;
-			font-size:12px;
-			line-height:22px;
-			text-align:center;
-		}
-		td div {
-			position:relative;
-			overflow:hidden;
-			width:21px;
-			height:21px;
-		}
-		td span {
-			float:left;
-			width:20px;
-			height:20px;
-			cursor:pointer;
-		}
-		#element-long {
-			margin-bottom: 1em;
-		}
-		#element_main {
-			margin: 0 auto 2em;
-			width: 15em;
-			border-radius: 3px;
-			border:1px solid #000;
-		}
-	</style>
-
-	<table id="PSE" cellspacing="1" cellpadding="0">
+	<table id="PSE" cellspacing="2" cellpadding="0">
 	<tbody><tr>
-	<td><div style="background-color:LimeGreen;"><a href="/?e=1" title="Wasserstoff"><span title="Wasserstoff (H), Nichtmetall">&nbsp;H&nbsp;</span></a></div>
-	</td>
-	<td colspan="16">
-	</td>
-	<td><div style="background-color:LightskyBlue;"><a href="/?e=2" title="Helium"><span title="Helium (He), Edelgas">&nbsp;He&nbsp;</span></a></div>
-	</td></tr>
-	<tr>
-	<td><div style="background-color:OrangeRed;"><a href="/?e=3" title="Lithium"><span title="Lithium (Li), Alkalimetall">&nbsp;Li&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:DarkOrange;"><a href="/?e=4" title="Beryllium"><span title="Beryllium (Be), Erdalkalimetall">&nbsp;Be&nbsp;</span></a></div>
-	</td>
-	<td colspan="10">
-	</td>
-	<td><div style="background-color:Peru;"><a href="/?e=5" title="Bor"><span title="Bor (B), Halbmetall">&nbsp;B&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LimeGreen;"><a href="/?e=6" title="Kohlenstoff"><span title="Kohlenstoff (C), Nichtmetall">&nbsp;C&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LimeGreen;"><a href="/?e=7" title="Stickstoff"><span title="Stickstoff (N), Nichtmetall">&nbsp;N&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LimeGreen;"><a href="/?e=8" title="Sauerstoff"><span title="Sauerstoff (O), Nichtmetall">&nbsp;O&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:Khaki;"><a href="/?e=9" title="Fluor"><span title="Fluor (F), Halogen">&nbsp;F&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LightskyBlue;"><a href="/?e=10" title="Neon"><span title=" Neon (Ne), Edelgas">&nbsp;Ne&nbsp;</span></a></div>
-	</td></tr>
-	<tr>
-	<td><div style="background-color:OrangeRed;"><a href="/?e=11" title="Natrium"><span title="Natrium (Na), Alkalimetall">&nbsp;Na&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:DarkOrange;"><a href="/?e=12" title="Magnesium"><span title="Magnesium (Mg), Erdalkalimetall">&nbsp;Mg&nbsp;</span></a></div>
-	</td>
-	<td colspan="10">
-	</td>
-	<td><div style="background-color:DarkGray;"><a href="/?e=13" title="Aluminium"><span title="Aluminium (Al), Metall">&nbsp;Al&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:Peru;"><a href="/?e=14" title="Silicium"><span title="Silicium (Si), Halbmetall">&nbsp;Si&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LimeGreen;"><a href="/?e=15" title="Phosphor"><span title="Phosphor (P), Nichtmetall">&nbsp;P&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LimeGreen;"><a href="/?e=16" title="Schwefel"><span title="Schwefel (S), Nichtmetall">&nbsp;S&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:Khaki;"><a href="/?e=17" title="Chlor"><span title="Chlor (Cl), Halogen">&nbsp;Cl&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LightskyBlue;"><a href="/?e=18" title="Argon"><span title="Argon (Ar), Edelgas">&nbsp;Ar&nbsp;</span></a></div>
-	</td></tr>
-	<tr>
-	<td><div style="background-color:OrangeRed;"><a href="/?e=19" title="Kalium"><span title="Kalium (K), Alkalimetall">&nbsp;K&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:DarkOrange;"><a href="/?e=20" title="Calcium"><span title="Calcium (Ca), Erdalkalimetall">&nbsp;Ca&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LightCoral;"><a href="/?e=21" title="Scandium"><span title="Scandium (Sc), Übergangsmetall">&nbsp;Sc&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LightCoral;"><a href="/?e=22" title="Titan"><span title="Titan (Ti), Übergangsmetall">&nbsp;Ti&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LightCoral;"><a href="/?e=23" title="Vanadium"><span title="Vanadium (V), Übergangsmetall">&nbsp;V&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LightCoral;"><a href="/?e=24" title="Chrom"><span title="Chrom (Cr), Übergangsmetall">&nbsp;Cr&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LightCoral;"><a href="/?e=25" title="Mangan"><span title="Mangan (Mn), Übergangsmetall">&nbsp;Mn&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LightCoral;"><a href="/?e=26" title="Eisen"><span title="Eisen (Fe), Übergangsmetall">&nbsp;Fe&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LightCoral;"><a href="/?e=27" title="Cobalt"><span title="Cobalt (Co), Übergangsmetall">&nbsp;Co&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LightCoral;"><a href="/?e=28" title="Nickel"><span title="Nickel (Ni), Übergangsmetall">&nbsp;Ni&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LightCoral;"><a href="/?e=29" title="Kupfer"><span title="Kupfer (Cu), Übergangsmetall">&nbsp;Cu&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LightCoral;"><a href="/?e=30" title="Zink"><span title="Zink (Zn), Übergangsmetall">&nbsp;Zn&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:DarkGray;"><a href="/?e=31" title="Gallium"><span title="Gallium (Ga), Metall">&nbsp;Ga&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:Peru;"><a href="/?e=32" title="Germanium"><span title="Germanium (Ge), Halbmetall">&nbsp;Ge&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:Peru;"><a href="/?e=33" title="Arsen"><span title="Arsen (As), Halbmetall">&nbsp;As&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:Peru;"><a href="/?e=34" title="Selen"><span title="Selen (Se), Halbmetall">&nbsp;Se&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:Khaki;"><a href="/?e=35" title="Brom"><span title="Brom (Br), Halogen">&nbsp;Br&nbsp;</span></a></div>
-	</td>
-	<td><div style="background-color:LightskyBlue;"><a href="/?e=36" title="Krypton"><span title="Krypton (Kr), Edelgas">&nbsp;Kr&nbsp;</span></a></div>
-	</td></tr>
+	<td><div id="1" class="nonmetal" title="Wasserstoff (H), Nichtmetall">&nbsp;H&nbsp;</div></td>
+	<td colspan="16"></td>
+	<td><div id="2" class="noblegas" title="Helium (He), Edelgas">&nbsp;He&nbsp;</div></td>
+	</tr><tr>
+	<td><div id="3" class="alkali" title="Lithium (Li), Alkalimetall">&nbsp;Li&nbsp;</div></td>
+	<td><div id="4" class="earth" title="Beryllium (Be), Erdalkalimetall">&nbsp;Be&nbsp;</div></td>
+	<td colspan="10"></td>
+	<td><div id="5" class="metaloids" title="Bor (B), Halbmetall">&nbsp;B&nbsp;</div></td>
+	<td><div id="6" class="nonmetal" title="Kohlenstoff (C), Nichtmetall">&nbsp;C&nbsp;</div></td>
+	<td><div id="7" class="nonmetal" title="Stickstoff (N), Nichtmetall">&nbsp;N&nbsp;</div></td>
+	<td><div id="8" class="nonmetal" title="Sauerstoff (O), Nichtmetall">&nbsp;O&nbsp;</div></td>
+	<td><div id="9" class="halogen" title="Fluor (F), Halogen">&nbsp;F&nbsp;</div></td>
+	<td><div id="10" class="noblegas" title=" Neon (Ne), Edelgas">&nbsp;Ne&nbsp;</div></td>
+	</tr><tr>
+	<td><div id="11" class="alkali" title="Natrium (Na), Alkalimetall">&nbsp;Na&nbsp;</div></td>
+	<td><div id="12" class="earth" title="Magnesium (Mg), Erdalkalimetall">&nbsp;Mg&nbsp;</div></td>
+	<td colspan="10"></td>
+	<td><div id="13" class="metals" title="Aluminium (Al), Metall">&nbsp;Al&nbsp;</div></td>
+	<td><div id="14" class="metaloids" title="Silicium (Si), Halbmetall">&nbsp;Si&nbsp;</div></td>
+	<td><div id="15" class="nonmetal" title="Phosphor (P), Nichtmetall">&nbsp;P&nbsp;</div></td>
+	<td><div id="16" class="nonmetal" title="Schwefel (S), Nichtmetall">&nbsp;S&nbsp;</div></td>
+	<td><div id="17" class="halogen" title="Chlor (Cl), Halogen">&nbsp;Cl&nbsp;</div></td>
+	<td><div id="18" class="noblegas" title="Argon (Ar), Edelgas">&nbsp;Ar&nbsp;</div></td>
+	</tr><tr>
+	<td><div id="19" class="alkali" title="Kalium (K), Alkalimetall">&nbsp;K&nbsp;</div></td>
+	<td><div id="20" class="earth" title="Calcium (Ca), Erdalkalimetall">&nbsp;Ca&nbsp;</div></td>
+	<td><div id="21" class="tran-met" title="Scandium (Sc), Übergangsmetall">&nbsp;Sc&nbsp;</div></td>
+	<td><div id="22" class="tran-met" title="Titan (Ti), Übergangsmetall">&nbsp;Ti&nbsp;</div></td>
+	<td><div id="23" class="tran-met" title="Vanadium (V), Übergangsmetall">&nbsp;V&nbsp;</div></td>
+	<td><div id="24" class="tran-met" title="Chrom (Cr), Übergangsmetall">&nbsp;Cr&nbsp;</div></td>
+	<td><div id="25" class="tran-met" title="Mangan (Mn), Übergangsmetall">&nbsp;Mn&nbsp;</div></td>
+	<td><div id="26" class="tran-met" title="Eisen (Fe), Übergangsmetall">&nbsp;Fe&nbsp;</div></td>
+	<td><div id="27" class="tran-met" title="Cobalt (Co), Übergangsmetall">&nbsp;Co&nbsp;</div></td>
+	<td><div id="28" class="tran-met" title="Nickel (Ni), Übergangsmetall">&nbsp;Ni&nbsp;</div></td>
+	<td><div id="29" class="tran-met" title="Kupfer (Cu), Übergangsmetall">&nbsp;Cu&nbsp;</div></td>
+	<td><div id="30" class="tran-met" title="Zink (Zn), Übergangsmetall">&nbsp;Zn&nbsp;</div></td>
+	<td><div id="31" class="metals" title="Gallium (Ga), Metall">&nbsp;Ga&nbsp;</div></td>
+	<td><div id="32" class="metaloids" title="Germanium (Ge), Halbmetall">&nbsp;Ge&nbsp;</div></td>
+	<td><div id="33" class="metaloids" title="Arsen (As), Halbmetall">&nbsp;As&nbsp;</div></td>
+	<td><div id="34" class="metaloids" title="Selen (Se), Halbmetall">&nbsp;Se&nbsp;</div></td>
+	<td><div id="35" class="halogen" title="Brom (Br), Halogen">&nbsp;Br&nbsp;</div></td>
+	<td><div id="36" class="noblegas" title="Krypton (Kr), Edelgas">&nbsp;Kr&nbsp;</div></td></tr>
 
 	</tbody></table>
 
 
-	<script>
-		let elements = document.querySelectorAll('#PSE > a');
-		elements.forEach((element) => {
-			elements.onclick = function(){
-				document.getElementById('PSE').setAttribute('style', 'opacity:0.5')
-				alert("lade " + element.getAttribute('title')+ " ...");
-			};
-		});
-		</script>
+	<div id="element_main">%2%</div>
+
 	</body>
 </html>
