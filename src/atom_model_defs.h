@@ -114,10 +114,6 @@ int8_t elements_ec[36][3] = { {0,1,0},{0,2,0},{0,1,0},{0,2,0},{0,2,1},{0,2,2},{0
 #define shell_M 18
 #define shell_N  8
 
-
-// current atom number
-int an = 0;
-
 /* Put your SSID & Password */
 const char* ssid = CONTROLLER_NAME;  // Enter SSID here
 const char* password = "12345678";  //Enter Password here
@@ -128,3 +124,10 @@ IPAddress gateway(192,168,1,1);
 IPAddress subnet(255,255,255,0);
 
 AsyncWebServer server(HTTP_PORT);
+
+// current atom number
+int an = 0;
+int an_wifi = 0; // if 0 nothing is requestes via wifi
+
+// serial input value
+int input = 0;

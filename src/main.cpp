@@ -4,7 +4,6 @@
 // load basic definitions and functions like animations
 #include "atom_model_fkt.h"
 
-int input = 0;
 void setup() {
   delay(1000);
   // debug-serial-connection
@@ -22,33 +21,33 @@ void setup() {
   WiFi.softAPConfig(local_ip, gateway, subnet);
   delay(100);
 
-
+  // get main html with PSE
   server.serveStatic("/", SPIFFS, "/");//.setDefaultFile("PSE.html");
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    Serial.println("html request");
+
     int paramsNr = request->params();
-
-
     for(int i=0;i<paramsNr;i++){
         AsyncWebParameter* p = request->getParam(i);
         if ( p->name() == "e" ) {
           an = p->value().toInt();
-          if ( an > 0 && an < 37 ) {
-          }
         }
     }
     if (!( an > 0 && an < 37 ) ) {
       an = 1;
     }
-    Serial.println("html request");
     request->send(200, "text/html", SendHTML( an ));
-    // causes watchdog issues with a delay
+    // doing the animation here causes watchdog issues with a delay
+    // -> do the animation in the main loop
     // https://stackoverflow.com/questions/66278271/task-watchdog-got-triggered-the-tasks-did-not-reset-the-watchdog-in-time
-    show_element( an, 1, 0);//50 );
+    an_wifi = an;
 
   });
-  server.on("/element", HTTP_GET, [](AsyncWebServerRequest *request){
 
-    Serial.print("loading element#");
+  // Ajax request for element change
+  server.on("/element", HTTP_GET, [](AsyncWebServerRequest *request){
+    Serial.println("ajax request");
+
     int paramsNr = request->params();
     int an = 0;
     for(int i=0;i<paramsNr;i++){
@@ -57,18 +56,14 @@ void setup() {
           an = p->value().toInt();
         }
     }
-    Serial.println(an);
     if (!( an > 0 && an < 37 ) ) {
       an = 1;
     }
-    Serial.println(an);
-    Serial.println("html request");
     request->send(200, "text/html", process_element_html( an ));
-    // causes watchdog issues with a delay
-    // https://stackoverflow.com/questions/66278271/task-watchdog-got-triggered-the-tasks-did-not-reset-the-watchdog-in-time
-    show_element( an, 1, 50 );
+    // doing the animation here causes watchdog issues with a delay
+    // -> do the animation in the main loop
+    an_wifi = an;
   });
-
 
   server.begin();
   Serial.println("HTTP server started");
@@ -103,18 +98,19 @@ void setup() {
   tft.fillScreen(TFT_BLACK);
 
   if (!SPIFFS.begin()) {
-    Serial.println("SPIFFS initialisation failed!");
-  }
-  Serial.println("\r\nSPIFFS available!");
+    Serial.println("\nSPIFFS initialisation failed!");
+  } else {
+    Serial.println("\nSPIFFS available!");
 
-  // ESP32 will crash if any of the fonts are missing
-  bool font_missing = false;
-  if (SPIFFS.exists("/NotoSansBold36.vlw")    == false) font_missing = true;
+    // ESP32 will crash if any of the fonts are missing
+    bool font_missing = false;
+    if (SPIFFS.exists("/NotoSansBold36.vlw")    == false) font_missing = true;
 
-  if (font_missing) {
-    Serial.println("\r\nFont missing in SPIFFS, did you upload it?");
+    if (font_missing) {
+      Serial.println("Font missing in SPIFFS, did you upload it?");
+    }
+    else Serial.println("Fonts found.");
   }
-  else Serial.println("\r\nFonts found OK.");
 
 
   Serial.println();
@@ -124,87 +120,29 @@ void setup() {
   delay(1000);
 }
 
+/*
+ * Main loop
+ */
 void loop() {
-  /*
-  for (int k = 0; k < 2; k++ ) {
-    for (int i = 0; i < 8; i++) {
-      Serial.println(String(k) + ", " + String(i));
-      PCF[k].write(i, 0); // an
-      PCF[k+2].write(i, 0); // an
-      delay(2000);
-      while(Serial.available() == 0) {
-      }
-      int mydata = Serial.read();
-      PCF[k].write(i, 1); // aus
-      PCF[k+2].write(i, 1); // aus
-
-    }
-    delay(500);
-  }
-  delay(1000);
-  */
   // standard function, iterate through elements
 
   if ( WiFi.softAPgetStationNum() == 0 ) {
-    for (an = 1; an < 37; an++ ) {
-      if ( WiFi.softAPgetStationNum() == 0 ) {
-
-        show_element( an, 1 );
-        while(Serial.available() == 0) {
-          delay(1000);
-          break;
-        }
-        input = Serial.read();
-        if ( input > 0 ) {
-          an = 36;
-        } else {
-          input = 0;
-        }
-      } else {
-        Serial.print( WiFi.softAPgetStationNum() );
-        Serial.println( " client(s) are connected! Stopping animation." );
-        break;
-      }
-    }
+    iterate_through_elements();
 
     if ( input > 0 ) {
-      char line[3];
-      char el_short[2];
-      int done  = 0;
-      int count = 0;
-
-      Serial.println( "Welches Element soll angezeigt werden? [c] zum Abbrechen" );
-      while (done == 0) {
-        if (Serial.available() > 0) {
-            line[count] = (char)Serial.read();
-
-            if (line[count] == '\r'){
-              done = 1;
-            } else {
-              el_short[count] = line[count];
-              if (count == 1) {
-                done = 1;
-              } else {
-                el_short[count+1]= '\0';
-              }
-            }
-            count += 1;
-        }
-      }
-
-      if (el_short != "c") {
-        show_element_by_short( el_short );
-
-      } else {
-        Serial.println("canceling operation. Back to loop animation.");
-      }
-
+      select_element_by_serial();
     } else {
-      Serial.println();
-      Serial.println("---loop done---");
+      Serial.println("\n---loop done---");
       delay(5000);
     }
     input = 0;
+  } else {
+    if ( an_wifi > 0 && an_wifi < 37 ) {
+      Serial.print( "Request by wifi detected: " );
+      Serial.print( elements_short[an_wifi-1] );
+      show_element( an_wifi, 1, 50 );
+      an_wifi = 0;
+    }
   }
   delay(50);
 }

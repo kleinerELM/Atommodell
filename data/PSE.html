@@ -20,6 +20,7 @@
 				text-align: center;
 				width: 100%;
 				margin: 0;
+				font-size: 1.5rem;
 			}
 			table {
 				margin:auto;
@@ -60,10 +61,23 @@
 				justify-content: space-between;
 				margin: 5px auto;
 			}
+			#element_main .e_config {
+				color: rgb(221, 151, 0);
+			}
+			#element_main .e_config sup {
+				color: rgb(221, 0, 0);
+			}
+			#element_main.earth .e_config {
+
+				color: rgb(185, 185, 185);
+			}
 			table td div {
 				padding: calc(7px + 0.5vw) 0;
 				border: 1px solid #fff;
 				border-radius: 3px;
+			}
+			#legend {
+				margin: 1em;font-size: 1.3rem;
 			}
 			.nonmetal {
 				border-color:LimeGreen;
@@ -86,8 +100,8 @@
 				color:DarkOrange;
 			}
 			.metaloids {
-				border-color:Peru;
-				color:Peru;
+				border-color:#c435b4;
+				color:#c435b4;
 			}
 			.metals {
 				border-color:DarkGray;
@@ -113,8 +127,9 @@ $(function(){
 		if (request) { request.abort(); }
 
 		set_url_par('e', e.target.id);
-		$('#element_main').removeClass('.nonmetal noblegas tran-met alkali earth metaloids metals halogen');
+		$('#element_main').removeClass('nonmetal noblegas tran-met alkali earth metaloids metals halogen');
 		$('#element_main').addClass(e.target.className);
+		$('#element_main').html("<i>lade Element...</i>");
 		var url = window.location.protocol + '//' + window.location.hostname + '/element?e='+e.target.id;
 
 		console.log(url);
@@ -165,16 +180,16 @@ $(function(){
 	</tr><tr>
 	<td><div id="19" class="alkali" title="Kalium (K), Alkalimetall">&nbsp;K&nbsp;</div></td>
 	<td><div id="20" class="earth" title="Calcium (Ca), Erdalkalimetall">&nbsp;Ca&nbsp;</div></td>
-	<td><div id="21" class="tran-met" title="Scandium (Sc), Übergangsmetall">&nbsp;Sc&nbsp;</div></td>
-	<td><div id="22" class="tran-met" title="Titan (Ti), Übergangsmetall">&nbsp;Ti&nbsp;</div></td>
-	<td><div id="23" class="tran-met" title="Vanadium (V), Übergangsmetall">&nbsp;V&nbsp;</div></td>
-	<td><div id="24" class="tran-met" title="Chrom (Cr), Übergangsmetall">&nbsp;Cr&nbsp;</div></td>
-	<td><div id="25" class="tran-met" title="Mangan (Mn), Übergangsmetall">&nbsp;Mn&nbsp;</div></td>
-	<td><div id="26" class="tran-met" title="Eisen (Fe), Übergangsmetall">&nbsp;Fe&nbsp;</div></td>
-	<td><div id="27" class="tran-met" title="Cobalt (Co), Übergangsmetall">&nbsp;Co&nbsp;</div></td>
-	<td><div id="28" class="tran-met" title="Nickel (Ni), Übergangsmetall">&nbsp;Ni&nbsp;</div></td>
-	<td><div id="29" class="tran-met" title="Kupfer (Cu), Übergangsmetall">&nbsp;Cu&nbsp;</div></td>
-	<td><div id="30" class="tran-met" title="Zink (Zn), Übergangsmetall">&nbsp;Zn&nbsp;</div></td>
+	<td><div id="21" class="tran-met" title="Scandium (Sc), &Uuml;bergangsmetall">&nbsp;Sc&nbsp;</div></td>
+	<td><div id="22" class="tran-met" title="Titan (Ti), &Uuml;bergangsmetall">&nbsp;Ti&nbsp;</div></td>
+	<td><div id="23" class="tran-met" title="Vanadium (V), &Uuml;bergangsmetall">&nbsp;V&nbsp;</div></td>
+	<td><div id="24" class="tran-met" title="Chrom (Cr), &Uuml;bergangsmetall">&nbsp;Cr&nbsp;</div></td>
+	<td><div id="25" class="tran-met" title="Mangan (Mn), &Uuml;bergangsmetall">&nbsp;Mn&nbsp;</div></td>
+	<td><div id="26" class="tran-met" title="Eisen (Fe), &Uuml;bergangsmetall">&nbsp;Fe&nbsp;</div></td>
+	<td><div id="27" class="tran-met" title="Cobalt (Co), &Uuml;bergangsmetall">&nbsp;Co&nbsp;</div></td>
+	<td><div id="28" class="tran-met" title="Nickel (Ni), &Uuml;bergangsmetall">&nbsp;Ni&nbsp;</div></td>
+	<td><div id="29" class="tran-met" title="Kupfer (Cu), &Uuml;bergangsmetall">&nbsp;Cu&nbsp;</div></td>
+	<td><div id="30" class="tran-met" title="Zink (Zn), &Uuml;bergangsmetall">&nbsp;Zn&nbsp;</div></td>
 	<td><div id="31" class="metals" title="Gallium (Ga), Metall">&nbsp;Ga&nbsp;</div></td>
 	<td><div id="32" class="metaloids" title="Germanium (Ge), Halbmetall">&nbsp;Ge&nbsp;</div></td>
 	<td><div id="33" class="metaloids" title="Arsen (As), Halbmetall">&nbsp;As&nbsp;</div></td>
@@ -184,6 +199,15 @@ $(function(){
 
 	</tbody></table>
 
+	<div id="legend">
+		<span class="nonmetal">Nichtmetalle</span>&nbsp;
+		<span class="noblegas">Edelgase</span>&nbsp;
+		<span class="alkali">Alkalimetalle</span>&nbsp;
+		<span class="earth">Erdalkalimetalle</span>&nbsp;
+		<span class="metaloids">Halbmetall</span>&nbsp;
+		<span class="tran-met">&Uuml;bergangsmetall</span>&nbsp;
+		<span class="metals">Metalle</span>
+	</div>
 
 	<div id="element_main">%2%</div>
 

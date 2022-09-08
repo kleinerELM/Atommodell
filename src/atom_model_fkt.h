@@ -4,7 +4,7 @@
 // load basic hardware and PSE definitions
 #include "atom_model_defs.h"
 
-String process_element_html( int an ) {
+String process_element_html( int atomic_number ) {
   String element_main      = "";
   File element_file   = SPIFFS.open("/element.html");
 
@@ -12,21 +12,20 @@ String process_element_html( int an ) {
   if (!element_file) {
     element_main = "Error loading template!";
   } else {
-    int arr_pos = an-1;
+    int arr_pos = atomic_number-1;
     element_main = element_file.readString();
 
     element_main.replace( "%1%", String(elements_enw[arr_pos], 2U) );
     element_main.replace( "%2%", elements_short[arr_pos] );
     element_main.replace( "%3%", elements_long[arr_pos] );
-    element_main.replace( "%4%", String( an ) );
+    element_main.replace( "%4%", String( atomic_number ) );
     element_main.replace( "%5%", String( elements_mass[arr_pos] ) );
 
     String klline_names[4] = {"K<sub>&alpha;</sub>", "K<sub>&beta;</sub>", "L<sub>&alpha;</sub>", "L<sub>&beta;</sub>"};
     String line_strings[4] = {"","","",""};
     for (int i = 0; i < 4; i++) {
-      line_strings[i] = klline_names[i] + ": ";
       if ( elements_kl[arr_pos][i] > 0 ) {
-        line_strings[i] += String(elements_kl[arr_pos][i],3U);
+        line_strings[i] = klline_names[i] + ": " + String(elements_kl[arr_pos][i],3U);
       } else {break;}
     }
     element_main.replace( "%6%", String( line_strings[0] ) );
@@ -34,7 +33,37 @@ String process_element_html( int an ) {
     element_main.replace( "%8%", String( line_strings[2] ) );
     element_main.replace( "%9%", String( line_strings[3] ) );
 
-    Serial.println(elements_long[an-1] + " (" + elements_short[an-1] + ")");
+    Serial.println(elements_long[arr_pos] + " (" + elements_short[arr_pos] + ")");
+
+
+    // electron configuration
+    String e_config = "";
+    int ec_pos[3] = {3,1,2};
+    if ( atomic_number > 2 ) {
+      ec_pos[1] += 1;
+      e_config = "[He] ";
+      if ( atomic_number > 10) {
+        ec_pos[1] += 1; // s
+        ec_pos[2] += 1; // p
+        e_config = "[Ne] ";
+        if ( atomic_number > 18 ) {
+          ec_pos[1] += 1; // s
+          ec_pos[2] += 1; // p
+          e_config = "[Ar] ";
+        }
+      }
+    }
+    u_int8_t ec_coord[3] = {0,0,0};
+    for (int p = 0; p < 3; p++) {
+      if (elements_ec[arr_pos][p] > 0 ) {
+        e_config += String(ec_pos[p])+ecn[p];
+        e_config += "<sup>"+String(elements_ec[arr_pos][p] > 9)+"</sup>";
+      }
+    }
+
+    element_main.replace( "%10%", e_config );
+
+
   }
   element_file.close();
 
@@ -73,7 +102,6 @@ void enable_lamp( int pcf_id, int pos, int state, int wait ) {
       }
     }
     delay( wait );
-    //server.handleClient();
 }
 
 void show_element( int atomic_number, int animation = 0, int electron_delay = 100 ) {
@@ -114,7 +142,6 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
 
   // electron configuration
   String e_config = "";
-  String pos = "";
   int glyph_width = tft.textWidth("a"); // font is monospace, therefore constant
   // {d, s, p} - order changed for simpler display algo.
   int ec_pos[3] = {3,1,2};
@@ -154,9 +181,8 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
     if (elements_ec[arr_pos][p] > 0) tft.print( String(elements_ec[arr_pos][p]) );
   }
 
-
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
   // element enw, right
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
   if (elements_enw[arr_pos] > 0) {
     String enw = String(elements_enw[arr_pos], 2U);
     ypos = 108;
@@ -250,6 +276,7 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
     }
   }
 
+  // make sure, all other lamps are off
   for (int i = start; i < atomic_number; i++) {
     int k = lamp_order[i]-1;
     enable_lamp( element[k][0], element[k][1], 0, electron_delay );
@@ -277,5 +304,63 @@ void show_element_by_short( char el_short[2] ) {
       Serial.print(elements_short[an-1] + ' ');
     }
     Serial.println("");
+  }
+}
+
+void iterate_through_elements( boolean force = false ) {
+    for (an = 1; an < 37; an++ ) {
+      // stop animation if a client is connected
+      if ( WiFi.softAPgetStationNum() == 0 || force ) {
+        // show the element
+        show_element( an, 1 );
+        // check for serial input
+        while(Serial.available() == 0) {
+          delay(1000);
+          break;
+        }
+        input = Serial.read();
+        if ( input > 0 ) {
+          an = 36;
+        } else {
+          input = 0;
+        }
+      } else {
+        Serial.print( WiFi.softAPgetStationNum() );
+        Serial.println( " client(s) are connected! Stopping animation." );
+        break;
+      }
+    }
+}
+
+void select_element_by_serial() {
+  char line[3];
+  char el_short[2];
+  int done  = 0;
+  int count = 0;
+
+  Serial.println( "Welches Element soll angezeigt werden? [c] zum Abbrechen" );
+  while (done == 0) {
+    if (Serial.available() > 0) {
+        line[count] = (char)Serial.read();
+
+        if (line[count] == '\r'){
+          done = 1;
+        } else {
+          el_short[count] = line[count];
+          if (count == 1) {
+            done = 1;
+          } else {
+            el_short[count+1]= '\0';
+          }
+        }
+        count += 1;
+    }
+  }
+
+  if (el_short != "c") {
+    show_element_by_short( el_short );
+
+  } else {
+    Serial.println("canceling operation. Back to loop animation.");
   }
 }
