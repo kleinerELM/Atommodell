@@ -218,7 +218,6 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
   tft.drawString(elements_short[arr_pos] , xpos-3, 35);
   tft.unloadFont(); // Remove the font to recover memory used
 
-
   Serial.println("tft display ready");
   delay(50);
 
@@ -287,6 +286,95 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
   //delay( shell_delay*(3-shell_pos) + electron_delay * ( 18- (atomic_number - start)) );
 
   Serial.println("----------------");
+}
+
+void center_tft(String text, int ypos, int fontsize) {
+  tft.setCursor((tft.width()-tft.textWidth(text, fontsize))/2,ypos,fontsize);
+  tft.println(text);
+}
+
+void show_wait_tft( ) {
+  int fontsize = 1;
+  int padding = 5;
+  int ypos = 20;
+
+  Serial.println();
+  Serial.println("----------------");
+  Serial.println("warte auf Verbindung...");
+
+  tft.fillScreen(TFT_BLACK);
+
+  tft.drawRect(1,1,tft.width()-1,tft.height()-1,TFT_WHITE);
+
+  u_int8_t char_width = tft.textWidth(" ", fontsize);
+  // atomic number, top left
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  center_tft( "Mit diesem W-LAN", ypos, fontsize);ypos += 10;
+  center_tft( "verbinden", ypos, fontsize);ypos += 20;
+  center_tft( "SSID:", ypos, fontsize);ypos += 10;
+
+  tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+  center_tft( String(CONTROLLER_NAME), ypos, fontsize);ypos += 10;
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  center_tft( "Passwort:", ypos, fontsize);ypos += 10;
+
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  center_tft( String(password), ypos, fontsize);ypos += 20;
+
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  center_tft( "Webadresse:", ypos, fontsize);ypos += 10;
+
+  tft.setTextColor(TFT_CYAN, TFT_BLACK);
+  center_tft( "http://" + local_ip.toString() + "/", ypos, fontsize );
+
+  Serial.println("----------------");
+}
+
+void show_wait_animation( ) {
+  // start lamp animation
+  for (int i = 10; i < 28; i++) {
+    enable_lamp( element[i][0], element[i][1], 0, 1000 );
+    enable_lamp( element[i][0], element[i][1], 1, 0 );
+    Serial.print(".");
+  }
+}
+
+void lamp_chek_animation( ) {
+  // start lamp animation
+  for (int i = 36; i > 27; i--) {
+    enable_lamp( element[i][0], element[i][1], 0, 0 );
+  }
+  delay(500);
+  for (int i = 27; i > 9; i--) {
+    enable_lamp( element[i][0], element[i][1], 0, 0 );
+  }
+  delay(500);
+  for (int i = 9; i > 1; i--) {
+    enable_lamp( element[i][0], element[i][1], 0, 0 );
+  }
+  delay(500);
+  for (int i = 1; i > -1; i--) {
+    enable_lamp( element[i][0], element[i][1], 0, 0 );
+  }
+
+  delay(500);
+  for (int i = 36; i > 27; i--) {
+    enable_lamp( element[i][0], element[i][1], 1, 0 );
+  }
+  delay(500);
+  for (int i = 27; i > 9; i--) {
+    enable_lamp( element[i][0], element[i][1], 1, 0 );
+  }
+  delay(500);
+  for (int i = 9; i > 1; i--) {
+    enable_lamp( element[i][0], element[i][1], 1, 0 );
+  }
+  delay(500);
+  for (int i = 1; i > -1; i--) {
+    enable_lamp( element[i][0], element[i][1], 1, 0 );
+  }
 }
 
 void show_element_by_short( char el_short[2] ) {

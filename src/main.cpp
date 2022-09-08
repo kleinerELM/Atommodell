@@ -18,7 +18,7 @@ void setup() {
   Serial.println("-WiFi-");
 
   WiFi.softAP(ssid, password);
-  WiFi.softAPConfig(local_ip, gateway, subnet);
+  WiFi.softAPConfig(local_ip, local_ip, subnet);
   delay(100);
 
   // get main html with PSE
@@ -94,10 +94,11 @@ void setup() {
     pinMode(direct_to_relais[i], OUTPUT);
     digitalWrite(direct_to_relais[i], HIGH);
   }
+  lamp_chek_animation( );
 
   tft.init();
   tft.setRotation(0);
-  tft.fillScreen(TFT_BLACK);
+  show_wait_tft( );
 
   if (!SPIFFS.begin()) {
     Serial.println("\nSPIFFS initialisation failed!");
@@ -125,20 +126,28 @@ void setup() {
 /*
  * Main loop
  */
+int loop_cnt = 0;
 void loop() {
   // standard function, iterate through elements
 
   if ( WiFi.softAPgetStationNum() == 0 ) {
-    iterate_through_elements();
+    if ( loop_cnt < 20 ) {
+      show_wait_animation( );
+      loop_cnt += 1;
+    } else {
+      iterate_through_elements();
+      delay(5000);
+    }
 
     if ( input > 0 ) {
       select_element_by_serial();
+      delay(5000);
     } else {
       Serial.println("\n---loop done---");
-      delay(5000);
     }
     input = 0;
   } else {
+    loop_cnt = 100;
     if ( an_wifi > 0 && an_wifi < 37 ) {
       animation_finished = false;
       Serial.print( "Request by wifi detected: " );

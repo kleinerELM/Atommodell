@@ -5,38 +5,22 @@
 
 #define CONTROLLER_NAME "Atommodell"
 
-#if defined(ARDUINO_ARCH_ESP32)
-  #include <WiFi.h>
-  #include <WebServer.h>
+#include <WiFi.h>
+#include <WebServer.h>
   //#include <ESPmDNS.h>
   //#include "HTTPUpdateServer.h"
   //#define HOSTIDENTIFY  "atommodell"
   //#define mDNSUpdate(c)  do {} while(0)
   //using WebServerClass = WebServer;
   //using HTTPUpdateServerClass = HTTPUpdateServer;
-#endif
 #include <WiFiClient.h>
 #include "ESPAsyncWebServer.h"
-//#include <AutoConnect.h>
 
 // Fix hostname for mDNS. It is a requirement for the lightweight update feature.
 //static const char* host = HOSTIDENTIFY "-webupdate";
 #define HTTP_PORT 80
 
 
-// Declare AutoConnectAux to bind the HTTPWebUpdateServer via /update url
-// and call it from the menu.
-// The custom web page is an empty page that does not contain AutoConnectElements.
-// Its content will be emitted by ESP8266HTTPUpdateServer.
-//HTTPUpdateServerClass httpUpdater;
-//AutoConnectAux  update("/update", "Update");
-
-// Declare AutoConnect and the custom web pages for an application sketch.
-//AutoConnect       portal(httpServer);
-//AutoConnectAux    hello;
-//AutoConnectConfig Config;
-
-//#define AA_FONT_SMALL "NotoSansBold15"
 #define AA_FONT_LARGE "NotoSansBold36"
 
 // Font files are stored in SPIFFS, so load the library
@@ -119,8 +103,8 @@ const char* ssid = CONTROLLER_NAME;  // Enter SSID here
 const char* password = "12345678";  //Enter Password here
 
 /* Put IP Address details */
-IPAddress local_ip(192,168,1,1);
-IPAddress gateway(192,168,1,1);
+IPAddress local_ip(1,3,3,7);
+//IPAddress gateway(1,3,3,7);
 IPAddress subnet(255,255,255,0);
 
 AsyncWebServer server(HTTP_PORT);
