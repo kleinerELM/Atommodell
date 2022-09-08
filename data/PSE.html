@@ -144,6 +144,11 @@ $(function(){
 			$('#element_main').html(response);
 		});
 	});
+	$("#PSE div").each(function( e ) {
+		if ( $("#element_number").html() == e ) {
+			$('#element_main').addClass($('#'+e)[0].className);
+		}
+	});
 });
 
 		</script>

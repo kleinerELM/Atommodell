@@ -47,22 +47,24 @@ void setup() {
   // Ajax request for element change
   server.on("/element", HTTP_GET, [](AsyncWebServerRequest *request){
     Serial.println("ajax request");
+    if ( animation_finished ) {
+      int paramsNr = request->params();
+      int an = 0;
+      for(int i=0;i<paramsNr;i++){
+          AsyncWebParameter* p = request->getParam(i);
+          if ( p->name() == "e" ) {
+            an = p->value().toInt();
+          }
+      }
+      if (!( an > 0 && an < 37 ) ) {
+        an = 1;
+      }
+     request->send(200, "text/html", process_element_html( an ));
+      // doing the animation here causes watchdog issues with a delay
+      // -> do the animation in the main loop
+      an_wifi = an;
+    }
 
-    int paramsNr = request->params();
-    int an = 0;
-    for(int i=0;i<paramsNr;i++){
-        AsyncWebParameter* p = request->getParam(i);
-        if ( p->name() == "e" ) {
-          an = p->value().toInt();
-        }
-    }
-    if (!( an > 0 && an < 37 ) ) {
-      an = 1;
-    }
-    request->send(200, "text/html", process_element_html( an ));
-    // doing the animation here causes watchdog issues with a delay
-    // -> do the animation in the main loop
-    an_wifi = an;
   });
 
   server.begin();
@@ -138,11 +140,14 @@ void loop() {
     input = 0;
   } else {
     if ( an_wifi > 0 && an_wifi < 37 ) {
+      animation_finished = false;
       Serial.print( "Request by wifi detected: " );
       Serial.print( elements_short[an_wifi-1] );
       show_element( an_wifi, 1, 50 );
       an_wifi = 0;
+      animation_finished = true;
+      Serial.println("\n---loop done---");
     }
+    //Serial.println(an_wifi);
   }
-  delay(50);
 }

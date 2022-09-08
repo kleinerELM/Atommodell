@@ -128,6 +128,7 @@ AsyncWebServer server(HTTP_PORT);
 // current atom number
 int an = 0;
 int an_wifi = 0; // if 0 nothing is requestes via wifi
+boolean animation_finished = true;
 
 // serial input value
 int input = 0;

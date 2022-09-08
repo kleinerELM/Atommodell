@@ -82,6 +82,7 @@ String SendHTML( int an ){
     content.replace( "%1%", String(CONTROLLER_NAME) );
     content.replace( "/?e=", "http://" + local_ip.toString() + "/?e=" );
     content.replace( "%2%", process_element_html( an ) );
+    if ( !animation_finished ) content += "Vorheriges Element noch nocht fertig angezeigt.";
   }
   template_file.close();
 
@@ -139,7 +140,6 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
   ypos = 75;
   tft.setCursor((tft.width()-tft.textWidth(elements_long[arr_pos], fontsize))/2,ypos,fontsize);
   tft.println(elements_long[arr_pos]);
-
   // electron configuration
   String e_config = "";
   int glyph_width = tft.textWidth("a"); // font is monospace, therefore constant
@@ -219,6 +219,7 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
   tft.unloadFont(); // Remove the font to recover memory used
 
 
+  Serial.println("tft display ready");
   delay(50);
 
   // start lamp animation
@@ -276,13 +277,14 @@ void show_element( int atomic_number, int animation = 0, int electron_delay = 10
     }
   }
 
+  Serial.println("all required lapmps on");
   // make sure, all other lamps are off
   for (int i = start; i < atomic_number; i++) {
     int k = lamp_order[i]-1;
     enable_lamp( element[k][0], element[k][1], 0, electron_delay );
   }
 
-  delay( shell_delay*(3-shell_pos) + electron_delay * ( 18- (atomic_number - start)) );
+  //delay( shell_delay*(3-shell_pos) + electron_delay * ( 18- (atomic_number - start)) );
 
   Serial.println("----------------");
 }
