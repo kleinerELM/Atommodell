@@ -57,7 +57,7 @@ String process_element_html( int atomic_number ) {
     for (int p = 0; p < 3; p++) {
       if (elements_ec[arr_pos][p] > 0 ) {
         e_config += String(ec_pos[p])+ecn[p];
-        e_config += "<sup>"+String(elements_ec[arr_pos][p] > 9)+"</sup>";
+        e_config += "<sup>"+String(elements_ec[arr_pos][p])+"</sup>";
       }
     }
 
